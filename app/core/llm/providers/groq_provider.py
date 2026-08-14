@@ -1,36 +1,36 @@
-from groq import AsyncGroq
-from groq import RateLimitError as GroqRateLimitError
-from groq import APIConnectionError, APITimeoutError
-
 from typing import AsyncIterator
 
-from app.core.llm.exceptions import LLMProviderError, RateLimitError, ProviderUnavailableError
-from app.core.llm.interfaces import LLMProvider, LLMResponse
-from app.core.llm.config import settings
+from groq import APIConnectionError, APITimeoutError, AsyncGroq
+from groq import RateLimitError as GroqRateLimitError
 
+from app.core.llm.config import settings
+from app.core.llm.exceptions import (LLMProviderError,
+                                     ProviderUnavailableError, RateLimitError)
+from app.core.llm.interfaces import LLMProvider, LLMResponse
 
 _MODEL = "llama-3.3-70b-versatile"
+
 
 class GroqProvider(LLMProvider):
     name = "groq"
 
     def __init__(self, *args, **kwargs) -> None:
-        self.client = AsyncGroq(
-            api_key=settings.GROQ_API_KEY
-        )
+        self.client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
     async def generate(self, prompt: str, **params) -> LLMResponse:
         try:
             response = await self.client.chat.completions.create(
                 messages=[
-                        {"role": "system","content": "You are a helpful assistant."},
-                        {"role": "user","content": prompt},
-                    ],
-                    model=_MODEL,
-                    temperature=params.get("temperature", 0.5),
-                    max_completion_tokens=params.get("max_completion_tokens", 1024),
-                    top_p=1, stop=None, stream=False,
-                )
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": prompt},
+                ],
+                model=_MODEL,
+                temperature=params.get("temperature", 0.5),
+                max_completion_tokens=params.get("max_completion_tokens", 1024),
+                top_p=1,
+                stop=None,
+                stream=False,
+            )
         except GroqRateLimitError as e:
             raise RateLimitError(f"Groq rate limit: {e}") from e
 
@@ -49,12 +49,15 @@ class GroqProvider(LLMProvider):
         try:
             stream = await self.client.chat.completions.create(
                 messages=[
-                    {"role": "system","content": "You are a helpful assistant."},
-                    {"role": "user","content": prompt},
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": prompt},
                 ],
                 model="llama-3.3-70b-versatile",
-                temperature=0.5, max_completion_tokens=1024,
-                top_p=1, stop=None, stream=True,
+                temperature=0.5,
+                max_completion_tokens=1024,
+                top_p=1,
+                stop=None,
+                stream=True,
             )
         except GroqRateLimitError as e:
             raise RateLimitError(f"Groq rate limit: {e}") from e

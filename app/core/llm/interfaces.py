@@ -13,8 +13,7 @@ class LLMResponse:
 class LLMProvider(Protocol):
     name: str
 
-    async def generate(self, prompt: str, **params) -> LLMResponse:
-        ...
+    async def generate(self, prompt: str, **params) -> LLMResponse: ...
 
     async def stream(self, prompt: str, **params) -> AsyncIterator[str]:
         # se o provider falhar depois de já ter emitido alguns chunks (ex: conexão cai no meio),

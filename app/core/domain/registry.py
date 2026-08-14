@@ -2,16 +2,18 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 
-from app.core.domain.interfaces import QuestionBank, RAGRetriever, RubricProvider
-
+from app.core.domain.interfaces import (QuestionBank, RAGRetriever,
+                                        RubricProvider)
 
 """ 
 Uso aqui factories, não instâncias prontas, 
 para não pagar custo de inicialização de domínios que não estão em uso. 
 """
 
+
 class DomainEnum(str, Enum):
     """Domínios de entrevista disponíveis no sistema."""
+
     ASYNC_MESSAGING = "async_messaging"
     # futuro: KAFKA = "kafka", RABBITMQ = "rabbitmq", etc.
 
@@ -20,6 +22,7 @@ class DomainEnum(str, Enum):
 class DomainModule:
     """Agrega as três dependências de domínio que o orquestrador precisa,
     sem conhecer suas implementações concretas."""
+
     retriever: RAGRetriever
     question_bank: QuestionBank
     rubric_provider: RubricProvider
@@ -27,6 +30,7 @@ class DomainModule:
 
 class DomainNotRegisteredError(Exception):
     """Levantado quando um domínio solicitado não está no registry."""
+
     def __init__(self, domain: DomainEnum):
         self.domain = domain
         super().__init__(

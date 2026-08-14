@@ -29,7 +29,9 @@ async def test_generate_returns_llm_response():
 async def test_generate_translates_rate_limit_error():
     provider = GroqProvider()
     provider.client.chat.completions.create = AsyncMock(
-        side_effect=GroqRateLimitError("limite excedido", response=MagicMock(), body=None)
+        side_effect=GroqRateLimitError(
+            "limite excedido", response=MagicMock(), body=None
+        )
     )
 
     with pytest.raises(RateLimitError):

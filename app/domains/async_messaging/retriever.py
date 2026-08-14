@@ -8,7 +8,7 @@ class FakeAsyncMessagingRetriever:
         return [
             Chunk(
                 text="Uma DLQ (Dead Letter Queue) captura mensagens que falharam "
-                     "após o número máximo de tentativas de processamento.",
+                "após o número máximo de tentativas de processamento.",
                 source="fake-placeholder",
                 topic="dead_letter_queue",
                 score=0.0,

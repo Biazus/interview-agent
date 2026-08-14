@@ -1,7 +1,9 @@
 from app.core.domain.registry import DomainEnum, DomainModule, register_domain
-from app.domains.async_messaging.question_bank import StaticAsyncMessagingQuestionBank
+from app.domains.async_messaging.question_bank import \
+    StaticAsyncMessagingQuestionBank
 from app.domains.async_messaging.retriever import FakeAsyncMessagingRetriever
-from app.domains.async_messaging.rubrics import FakeAsyncMessagingRubricProvider
+from app.domains.async_messaging.rubrics import \
+    FakeAsyncMessagingRubricProvider
 
 
 def _build_async_messaging_domain() -> DomainModule:

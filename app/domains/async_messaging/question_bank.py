@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import yaml
 
 from app.core.domain.interfaces import Question
@@ -16,11 +17,14 @@ class StaticAsyncMessagingQuestionBank:
 
     def next_question(self, topic: str, difficulty: int) -> Question:
         candidates = [
-            q for q in self._questions
+            q
+            for q in self._questions
             if q.topic == topic and q.difficulty == difficulty
         ]
         if not candidates:
-            raise ValueError(f"Nenhuma pergunta encontrada para topic={topic}, difficulty={difficulty}")
+            raise ValueError(
+                f"Nenhuma pergunta encontrada para topic={topic}, difficulty={difficulty}"
+            )
         return candidates[0]
 
     def topics(self) -> list[str]:

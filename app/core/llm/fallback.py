@@ -25,7 +25,9 @@ class FallbackLLMProvider:
             try:
                 return await provider.generate(prompt, **params)
             except LLMProviderError as e:
-                logger.warning(f"Provider '{provider.name}' falhou: {e}. Tentando próximo.")
+                logger.warning(
+                    f"Provider '{provider.name}' falhou: {e}. Tentando próximo."
+                )
                 last_error = e
                 continue
         raise LLMProviderError(
@@ -40,7 +42,9 @@ class FallbackLLMProvider:
                     yield chunk
                 return
             except LLMProviderError as e:
-                logger.warning(f"Provider '{provider.name}' falhou no streaming: {e}. Tentando próximo.")
+                logger.warning(
+                    f"Provider '{provider.name}' falhou no streaming: {e}. Tentando próximo."
+                )
                 last_error = e
                 continue
         raise LLMProviderError(
