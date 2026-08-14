@@ -1,0 +1,49 @@
+- id: sqs-01
+  topic: dead_letter_queue
+  difficulty: 1
+  prompt: "O que é uma Dead Letter Queue e quando ela deveria ser usada?"
+
+- id: sqs-02
+  topic: dead_letter_queue
+  difficulty: 2
+  prompt: "Como o maxReceiveCount de uma fila SQS se relaciona com sua DLQ, e o que acontece se ele estiver mal configurado?"
+
+- id: sqs-03
+  topic: visibility_timeout
+  difficulty: 1
+  prompt: "O que é o Visibility Timeout em uma fila SQS e por que ele existe?"
+
+- id: sqs-04
+  topic: visibility_timeout
+  difficulty: 3
+  prompt: "Um consumidor está processando mensagens de uma fila SQS, mas o processamento leva mais tempo do que o Visibility Timeout configurado. Que problema isso causa, e como você resolveria?"
+
+- id: sns-01
+  topic: fan_out
+  difficulty: 1
+  prompt: "Explique o padrão de fan-out usando SNS e SQS. Por que não usar SNS sozinho, sem filas SQS como assinantes?"
+
+- id: sns-02
+  topic: fan_out
+  difficulty: 3
+  prompt: "Em uma arquitetura de fan-out com uma tópico SNS e três filas SQS assinantes, uma das filas está acumulando mensagens sem serem processadas. As outras duas estão normais. Quais seriam suas hipóteses e como investigaria?"
+
+- id: lambda-01
+  topic: lambda_retry
+  difficulty: 1
+  prompt: "O que acontece quando uma função Lambda invocada de forma assíncrona (ex: por SNS) falha na execução?"
+
+- id: lambda-02
+  topic: lambda_retry
+  difficulty: 2
+  prompt: "Qual é a diferença de comportamento de retry entre uma Lambda invocada por SQS e uma invocada de forma assíncrona (ex: SNS ou EventBridge)?"
+
+- id: lambda-03
+  topic: batch_processing
+  difficulty: 2
+  prompt: "Como o Lambda processa mensagens em lote (batch) vindas de uma fila SQS, e o que acontece se apenas uma mensagem do lote falhar?"
+
+- id: lambda-04
+  topic: batch_processing
+  difficulty: 4
+  prompt: "Descreva como o Report Batch Item Failures resolve o problema de uma mensagem 'envenenada' bloquear o reprocessamento de um lote inteiro."

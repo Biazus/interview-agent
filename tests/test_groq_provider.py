@@ -1,0 +1,36 @@
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from groq import RateLimitError as GroqRateLimitError
+
+from app.core.llm.exceptions import RateLimitError
+from app.core.llm.providers.groq_provider import GroqProvider
+
+
+@pytest.mark.asyncio
+async def test_generate_returns_llm_response():
+    provider = GroqProvider()
+
+    fake_response = MagicMock()
+    fake_response.choices[0].message.content = "resposta de teste"
+    fake_response.model = "llama-3.3-70b-versatile"
+    fake_response.usage.total_tokens = 42
+
+    provider.client.chat.completions.create = AsyncMock(return_value=fake_response)
+
+    result = await provider.generate("qualquer prompt")
+
+    assert result.text == "resposta de teste"
+    assert result.provider == "groq"
+    assert result.tokens_used == 42
+
+
+@pytest.mark.asyncio
+async def test_generate_translates_rate_limit_error():
+    provider = GroqProvider()
+    provider.client.chat.completions.create = AsyncMock(
+        side_effect=GroqRateLimitError("limite excedido", response=MagicMock(), body=None)
+    )
+
+    with pytest.raises(RateLimitError):
+        await provider.generate("qualquer prompt")

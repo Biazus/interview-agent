@@ -1,19 +1,18 @@
+from pathlib import Path
+import yaml
+
 from app.core.domain.interfaces import Question
+
+_DATA_PATH = Path(__file__).parent / "data" / "questions.yaml"
 
 
 class StaticAsyncMessagingQuestionBank:
     """Banco de perguntas estático, cobrindo SQS/SNS/Lambda."""
 
-    def __init__(self) -> None:
-        self._questions = [
-            Question(
-                id="sqs-01",
-                topic="dead_letter_queue",
-                difficulty=1,
-                prompt="O que é uma Dead Letter Queue e quando ela deveria ser usada?",
-            ),
-            # ... demais perguntas (15-20 no total, cobrindo os subtópicos)
-        ]
+    def __init__(self, data_path: Path = _DATA_PATH) -> None:
+        with open(data_path, encoding="utf-8") as f:
+            raw = yaml.safe_load(f)
+        self._questions = [Question(**item) for item in raw]
 
     def next_question(self, topic: str, difficulty: int) -> Question:
         candidates = [

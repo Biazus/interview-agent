@@ -1,0 +1,10 @@
+class LLMProviderError(Exception):
+    ...
+
+
+class RateLimitError(LLMProviderError):
+    ...
+
+
+class ProviderUnavailableError(LLMProviderError):
+    ...
