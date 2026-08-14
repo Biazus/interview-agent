@@ -1,0 +1,29 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - vector-db
+
+  vector-db:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  localstack:
+    image: localstack/localstack:latest
+    profiles: ["messaging"]
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs,sns,lambda
+
+volumes:
+  qdrant_data:
