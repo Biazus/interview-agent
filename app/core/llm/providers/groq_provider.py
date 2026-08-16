@@ -17,8 +17,8 @@ _MODEL = "llama-3.3-70b-versatile"
 class GroqProvider(LLMProvider):
     name = "groq"
 
-    def __init__(self, *args, **kwargs) -> None:
-        self.client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+    def __init__(self, client: AsyncGroq | None = None) -> None:
+        self.client = client or AsyncGroq(api_key=settings.GROQ_API_KEY)
 
     async def generate(self, prompt: str, **params) -> LLMResponse:
         try:

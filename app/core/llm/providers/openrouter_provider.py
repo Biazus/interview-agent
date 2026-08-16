@@ -14,8 +14,8 @@ _BASE_URL = "https://openrouter.ai/api/v1"
 class OpenRouterProvider:
     name = "openrouter"
 
-    def __init__(self) -> None:
-        self.client = AsyncOpenAI(
+    def __init__(self, client: AsyncOpenAI | None = None) -> None:
+        self.client = client or AsyncOpenAI(
             api_key=settings.OPENROUTER_API_KEY,
             base_url=_BASE_URL,
         )
