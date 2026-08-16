@@ -1,5 +1,6 @@
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import (Distance, FieldCondition, Filter, MatchValue,
+                                  PointStruct, VectorParams)
 
 _VECTOR_SIZE = 384  # dimensão de saída do all-MiniLM-L6-v2
 
@@ -9,7 +10,6 @@ class VectorStore:
         self._client = QdrantClient(host=host, port=port)
 
     def ensure_collection(self, collection_name: str) -> None:
-        """Cria a coleção se ainda não existir (idempotente)."""
         existing = [c.name for c in self._client.get_collections().collections]
         if collection_name not in existing:
             self._client.create_collection(
@@ -28,16 +28,27 @@ class VectorStore:
     ) -> None:
         points = [
             PointStruct(id=idx, vector=vector, payload=payload)
-            for idx, (vector, payload) in enumerate(zip(vectors, payloads))
+            for idx, vector, payload in zip(ids, vectors, payloads)
         ]
         self._client.upsert(collection_name=collection_name, points=points)
 
     def search(
-        self, collection_name: str, query_vector: list[float], top_k: int = 3
+        self,
+        collection_name: str,
+        query_vector: list[float],
+        top_k: int = 3,
+        topic: str | None = None,
     ) -> list[dict]:
+        query_filter = None
+        if topic is not None:
+            query_filter = Filter(
+                must=[FieldCondition(key="topic", match=MatchValue(value=topic))]
+            )
+
         results = self._client.query_points(
             collection_name=collection_name,
             query=query_vector,
+            query_filter=query_filter,
             limit=top_k,
         )
         return [{"score": r.score, **r.payload} for r in results.points]

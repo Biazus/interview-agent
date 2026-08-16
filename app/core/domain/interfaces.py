@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from app.core.llm.interfaces import LLMResponse
+
 """
 Em RAG (Retrieval-Augmented Generation), você não joga um documento inteiro para o LLM buscar informação.
 Isso estouraria o limite de contexto e sairia caro.
@@ -43,6 +45,14 @@ class RubricCriterion:
     weak_example: str
     medium_example: str
     strong_example: str
+
+
+@dataclass(frozen=True)
+class Evaluation:
+    topic: str
+    level: str  # "weak" | "medium" | "strong"
+    feedback: str
+    raw_response: LLMResponse  # qual provider respondeu, tokens, etc.
 
 
 @dataclass(frozen=True)

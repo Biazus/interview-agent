@@ -12,16 +12,16 @@ async def main():
     retriever = QdrantRetriever("async_messaging")
 
     queries = [
-        "Onde é possivel armazenar mensagens que não puderam ser processadas com sucesso",
+        "Uma Dead Letter Queue (DLQ) no Amazon SQS é uma fila usada por outras filas (as filas de origem) para armazenar mensagens que não puderam ser processadas com sucesso",
         "Existe redirecionamento automático entre uma DLQ ea fila original?",
         # "quero enviar um evento para vários sistemas diferentes ao mesmo tempo",
     ]
 
     for query in queries:
         print(f"\nQuery: {query}")
-        chunks = await retriever.retrieve(query, top_k=2)
+        chunks = retriever.retrieve(query, top_k=2)
         for chunk in chunks:
-            print(f"  [{chunk.score:.3f}] ({chunk.topic}) {chunk.text[:80]}...")
+            print(f"  [{chunk.score:.3f}] ({chunk.topic}) {chunk.text}...")
 
 
 if __name__ == "__main__":

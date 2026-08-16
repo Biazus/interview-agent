@@ -21,6 +21,119 @@ documents:
       ou automatizado explícito, como o recurso de redrive nativo do
       console/CLI do SQS.
 
+  - id: doc_dlq_03
+    topic: dead_letter_queue
+    text: >
+      Uma Dead Letter Queue (DLQ) é uma fila SQS separada, configurada para
+      receber mensagens que não puderam ser processadas com sucesso por uma 
+      fila de origem após um número determinado de tentativas. Esse número é 
+      definido pelo parâmetro maxReceiveCount: toda vez que um consumidor recebe 
+      uma mensagem e não a deleta (seja porque a aplicação lançou uma exceção, 
+      seja porque o processamento falhou por qualquer motivo), o SQS incrementa 
+      o contador de recebimentos daquela mensagem. Quando esse contador ultrapassa 
+      o valor configurado, o SQS move automaticamente a mensagem da fila original 
+      para a DLQ, em vez de continuar tentando entregá-la indefinidamente.
+      O propósito principal da DLQ é isolar mensagens problemáticas do fluxo normal 
+      de processamento, evitando dois problemas comuns: mensagens "envenenadas" 
+      (poison messages) que falham repetidamente e ficam ocupando capacidade de 
+      processamento sem nunca serem concluídas, e a perda silenciosa de dados, já 
+      que sem uma DLQ essas mensagens eventualmente expirariam e seriam descartadas pelo 
+      SQS sem deixar rastro algum. Ela deveria ser usada sempre que existe risco de 
+      falhas recorrentes no processamento, especialmente em sistemas de produção onde 
+      a rastreabilidade de erros é importante. Casos típicos incluem: filas que alimentam 
+      Lambdas ou workers que processam pagamentos, pedidos ou notificações críticas, 
+      onde perder uma mensagem sem registro seria inaceitável; e cenários em que se 
+      espera que uma pequena fração das mensagens possa ter formato inválido ou 
+      dependências externas indisponíveis, permitindo que a equipe investigue e 
+      reprocesse manualmente depois.
+
+  - id: doc_dlq_04
+    topic: dead_letter_queue
+    text: >
+      Pense na DLQ como uma "gaveta de mensagens problemáticas" dentro da arquitetura 
+      de filas. Ela existe para resolver um problema prático: o que fazer com uma mensagem 
+      que o sistema tentou processar várias vezes e sempre falhou? Sem uma DLQ, essa 
+      mensagem ficaria voltando para a fila principal repetidamente (porque, ao não 
+      ser deletada, ela volta a ficar visível após o Visibility Timeout) até finalmente 
+      expirar e ser descartada pelo SQS — e nesse ponto você perdeu a mensagem e, na 
+      maioria dos casos, não tem nenhum log claro de que isso aconteceu.
+      Tecnicamente, a DLQ é apenas outra fila SQS comum, sem nada de especial na sua criação 
+      — o que a torna uma "dead letter queue" é a configuração de redrive policy feita na 
+      fila de origem, que aponta para ela e define o maxReceiveCount. A partir daí, o 
+      próprio SQS gerencia o redirecionamento automaticamente, sem precisar de código 
+      adicional na aplicação. Quanto a quando usá-la: praticamente toda fila de produção
+      que alimenta um processamento assíncrono importante deveria ter uma DLQ associada.
+      As exceções ficam por conta de filas que lidam com dados efêmeros ou não críticos, 
+      onde perder uma mensagem ocasional não tem impacto relevante (por exemplo, eventos 
+      de telemetria de baixa importância). Fora esses casos, a DLQ funciona como uma rede 
+      de segurança que permite à equipe monitorar taxas de erro (alertando quando 
+      mensagens começam a cair nela), investigar a causa raiz com calma, e decidir se 
+      a mensagem deve ser corrigida e reprocessada ou descartada definitivamente.
+
+  - id: doc_dlq_05
+    topic: dead_letter_queue
+    text: >
+      O maxReceiveCount é o parâmetro dentro da Redrive Policy da fila SQS 
+      que determina quantas vezes uma mensagem pode ser recebida (não deletada) 
+      por um consumidor antes de ser automaticamente movida para a DLQ associada. 
+      Funcionalmente, cada vez que o SQS entrega uma mensagem a um consumidor via 
+      ReceiveMessage, ele incrementa um contador interno associado àquela mensagem 
+      específica. Se o consumidor processa a mensagem com sucesso e a deleta 
+      explicitamente (DeleteMessage), o ciclo termina normalmente. Se o consumidor 
+      não a deleta — seja porque o processamento falhou, seja porque a aplicação 
+      travou, seja porque o Visibility Timeout expirou antes da conclusão — a mensagem 
+      volta a ficar visível na fila, e na próxima vez que for recebida, o contador 
+      sobe mais um. Quando esse contador ultrapassa o maxReceiveCount configurado, 
+      o SQS redireciona a mensagem para a DLQ, tirando-a da fila principal.
+      Se o maxReceiveCount estiver mal configurado, os problemas variam dependendo 
+      da direção do erro. Se estiver muito baixo (por exemplo, 1), mensagens 
+      legítimas que falham por motivos transitórios (timeout momentâneo de uma 
+      dependência externa, throttling temporário, um pico de carga) podem ser 
+      enviadas prematuramente à DLQ sem ter tido chance real de reprocessamento,
+      gerando falsos positivos e sobrecarregando a equipe com investigações 
+      desnecessárias. Se estiver muito alto (ou até ausente, o que significa 
+      que não há DLQ configurada), mensagens problemáticas continuam sendo tentadas
+      repetidamente por muito tempo, consumindo capacidade de processamento e 
+      atrasando a fila inteira, especialmente em filas FIFO onde uma mensagem 
+      travada bloqueia todo o grupo de mensagens subsequente.
+  
+
+  - id: doc_dlq_06 
+    topic: dead_letter_queue
+    text: >
+      Vale pensar no maxReceiveCount como o "número de chances" que o 
+      sistema dá antes de desistir de processar aquela mensagem pelo 
+      caminho normal e isolá-la numa DLQ para investigação. Ele é 
+      configurado na fila de origem (não na DLQ), como parte da Redrive 
+      Policy, junto com o ARN da fila de destino que vai receber as 
+      mensagens problemáticas. A relação entre os dois é direta: 
+      sem um maxReceiveCount definido, não existe redirecionamento 
+      automático — a DLQ pode até estar criada e associada, mas se 
+      esse parâmetro não estiver corretamente configurado (ou estiver 
+      zerado/ausente), as mensagens nunca chegarão lá, continuando a 
+      expirar silenciosamente da fila original após o retention period 
+      padrão. Quando a configuração está errada, os efeitos práticos 
+      aparecem de formas distintas. Um valor baixo demais faz a DLQ 
+      "gritar lobo" com frequência: mensagens que só precisavam de 
+      uma segunda tentativa (por exemplo, um serviço externo que 
+      estava momentaneamente indisponível) acabam classificadas como 
+      falha permanente, gerando ruído e desconfiança na sinalização 
+      de erros — a equipe passa a ignorar alertas da DLQ porque 
+      "sempre tem coisa lá que não é problema de verdade". Um valor 
+      alto demais tem o efeito oposto e mais perigoso: mensagens 
+      genuinamente com erro (payload corrompido, bug de código) 
+      ficam sendo reprocessadas dezenas de vezes, consumindo throughput 
+      da fila, gerando custos desnecessários de invocação (se há 
+      Lambda por trás) e atrasando a detecção do problema real, porque 
+      a equipe só é alertada quando a mensagem finalmente "desiste" 
+      e cai na DLQ, o que pode levar muito mais tempo do que deveria.
+      Na prática, o valor ideal costuma equilibrar tolerância a falhas 
+      transitórias (geralmente entre 3 e 5 tentativas é um ponto de 
+      partida razoável) com a necessidade de detectar rapidamente 
+      problemas sistêmicos, e deve ser ajustado considerando o Visibility 
+      Timeout da fila e o tempo médio de retry de eventuais backoffs 
+      aplicados pela aplicação consumidora.
+    
   - id: doc_visibility_01
     topic: visibility_timeout
     text: >

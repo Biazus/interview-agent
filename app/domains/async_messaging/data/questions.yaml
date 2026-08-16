@@ -8,42 +8,167 @@
   difficulty: 2
   prompt: "Como o maxReceiveCount de uma fila SQS se relaciona com sua DLQ, e o que acontece se ele estiver mal configurado?"
 
+- id: sqs-05
+  topic: dead_letter_queue
+  difficulty: 1
+  prompt: "Uma DLQ pode receber mensagens de múltiplas filas de origem? Explique."
+
+- id: sqs-06
+  topic: dead_letter_queue
+  difficulty: 2
+  prompt: "Qual a diferença entre configurar uma DLQ para uma fila SQS padrão e para uma fila FIFO?"
+
+- id: sqs-07
+  topic: dead_letter_queue
+  difficulty: 3
+  prompt: "Uma mensagem foi parar na DLQ. Quais passos você seguiria para diagnosticar a causa raiz antes de reprocessá-la?"
+
+- id: sqs-08
+  topic: dead_letter_queue
+  difficulty: 4
+  prompt: "Como você projetaria uma estratégia de redirecionamento automático (redrive) de mensagens da DLQ de volta à fila de origem, considerando riscos de loop infinito?"
+
+- id: sqs-09
+  topic: dead_letter_queue
+  difficulty: 5
+  prompt: "Em um sistema de alta escala, milhares de mensagens começam a cair na DLQ simultaneamente após um deploy. Descreva sua estratégia completa de resposta a incidente, incluindo mitigação, investigação e prevenção."
+
 - id: sqs-03
   topic: visibility_timeout
   difficulty: 1
   prompt: "O que é o Visibility Timeout em uma fila SQS e por que ele existe?"
+
+- id: sqs-10
+  topic: visibility_timeout
+  difficulty: 1
+  prompt: "Se um consumidor deletar uma mensagem antes do fim do Visibility Timeout, o que acontece com essa mensagem?"
+
+- id: sqs-11
+  topic: visibility_timeout
+  difficulty: 2
+  prompt: "Qual é o valor máximo permitido para o Visibility Timeout em uma fila SQS, e o que acontece se você tentar definir um valor maior?"
+
+- id: sqs-12
+  topic: visibility_timeout
+  difficulty: 2
+  prompt: "O que é a API ChangeMessageVisibility e em que cenário você a usaria durante o processamento de uma mensagem?"
 
 - id: sqs-04
   topic: visibility_timeout
   difficulty: 3
   prompt: "Um consumidor está processando mensagens de uma fila SQS, mas o processamento leva mais tempo do que o Visibility Timeout configurado. Que problema isso causa, e como você resolveria?"
 
+- id: sqs-13
+  topic: visibility_timeout
+  difficulty: 4
+  prompt: "Você tem múltiplos consumidores lendo da mesma fila SQS. Como o Visibility Timeout garante que duas instâncias não processem a mesma mensagem simultaneamente? Existe algum cenário em que isso pode falhar?"
+
+- id: sqs-14
+  topic: visibility_timeout
+  difficulty: 5
+  prompt: "Projete uma estratégia de Visibility Timeout dinâmico para um sistema onde o tempo de processamento varia enormemente entre mensagens (de 1 segundo a 10 minutos). Quais os trade-offs?"
+
 - id: sns-01
   topic: fan_out
   difficulty: 1
   prompt: "Explique o padrão de fan-out usando SNS e SQS. Por que não usar SNS sozinho, sem filas SQS como assinantes?"
+
+- id: sns-03
+  topic: fan_out
+  difficulty: 2
+  prompt: "Como você garantiria que apenas mensagens de um determinado tipo cheguem a uma fila específica, em uma arquitetura de fan-out com múltiplos assinantes SQS?"
+
+- id: sns-04
+  topic: fan_out
+  difficulty: 2
+  prompt: "O que é uma SNS Subscription Filter Policy e como ela ajuda a reduzir custos e processamento desnecessário em um fan-out?"
+
+- id: sns-05
+  topic: fan_out
+  difficulty: 3
+  prompt: "Qual a diferença entre garantir 'at-least-once' delivery no SNS e garantir ordenação de mensagens? Como isso afeta o design do fan-out?"
 
 - id: sns-02
   topic: fan_out
   difficulty: 3
   prompt: "Em uma arquitetura de fan-out com uma tópico SNS e três filas SQS assinantes, uma das filas está acumulando mensagens sem serem processadas. As outras duas estão normais. Quais seriam suas hipóteses e como investigaria?"
 
+- id: sns-06
+  topic: fan_out
+  difficulty: 4
+  prompt: "Como você lidaria com a necessidade de adicionar um novo assinante (fila SQS) a um tópico SNS já em produção, sem perder mensagens e sem downtime?"
+
+- id: sns-07
+  topic: fan_out
+  difficulty: 5
+  prompt: "Descreva como implementaria um padrão de fan-out multi-região para garantir disaster recovery, considerando replicação de tópicos SNS e filas SQS entre regiões AWS."
+
 - id: lambda-01
   topic: lambda_retry
   difficulty: 1
   prompt: "O que acontece quando uma função Lambda invocada de forma assíncrona (ex: por SNS) falha na execução?"
+
+- id: lambda-05
+  topic: lambda_retry
+  difficulty: 1
+  prompt: "O que é uma Dead Letter Queue configurada diretamente em uma função Lambda (destination on failure), e como ela difere da DLQ de uma fila SQS?"
 
 - id: lambda-02
   topic: lambda_retry
   difficulty: 2
   prompt: "Qual é a diferença de comportamento de retry entre uma Lambda invocada por SQS e uma invocada de forma assíncrona (ex: SNS ou EventBridge)?"
 
+- id: lambda-06
+  topic: lambda_retry
+  difficulty: 3
+  prompt: "Quantas vezes o Lambda tenta reprocessar automaticamente uma invocação assíncrona que falhou, por padrão, e como isso pode ser configurado?"
+
+- id: lambda-07
+  topic: lambda_retry
+  difficulty: 3
+  prompt: "O que são as Lambda Destinations (on success/on failure) e como elas se diferenciam do uso de uma DLQ tradicional?"
+
+- id: lambda-08
+  topic: lambda_retry
+  difficulty: 4
+  prompt: "Uma função Lambda invocada assincronamente está entrando em um loop de retries porque sempre lança uma exceção transiente antes de atingir timeout. Como você diagnosticaria e resolveria esse problema, minimizando custo e mantendo confiabilidade?"
+
+- id: lambda-09
+  topic: lambda_retry
+  difficulty: 5
+  prompt: "Compare as estratégias de retry e tratamento de falha entre invocação síncrona, assíncrona e via poller de eventos (SQS/Kinesis) no Lambda. Como cada uma impacta o design de resiliência de um sistema?"
+
+- id: lambda-10
+  topic: batch_processing
+  difficulty: 1
+  prompt: "O que é o parâmetro BatchSize na configuração de um Event Source Mapping entre SQS e Lambda?"
+
+- id: lambda-11
+  topic: batch_processing
+  difficulty: 2
+  prompt: "O que é o Maximum Batching Window e como ele interage com o BatchSize na configuração de um Event Source Mapping?"
+
 - id: lambda-03
   topic: batch_processing
   difficulty: 2
   prompt: "Como o Lambda processa mensagens em lote (batch) vindas de uma fila SQS, e o que acontece se apenas uma mensagem do lote falhar?"
 
+- id: lambda-12
+  topic: batch_processing
+  difficulty: 3
+  prompt: "Quais são os riscos de usar um BatchSize muito alto em uma fila SQS acoplada a uma Lambda, especialmente relacionados ao Visibility Timeout?"
+
+- id: lambda-13
+  topic: batch_processing
+  difficulty: 4
+  prompt: "Como o uso de FIFO queues afeta o comportamento de batch processing no Lambda, especialmente em relação a falhas parciais dentro de um lote?"
+
 - id: lambda-04
   topic: batch_processing
   difficulty: 4
   prompt: "Descreva como o Report Batch Item Failures resolve o problema de uma mensagem 'envenenada' bloquear o reprocessamento de um lote inteiro."
+
+- id: lambda-14
+  topic: batch_processing
+  difficulty: 5
+  prompt: "Projete uma arquitetura de processamento em lote para uma fila SQS de altíssimo volume (milhões de mensagens/dia), considerando concorrência do Lambda, Report Batch Item Failures, DLQ e monitoramento de erros. Descreva os trade-offs de cada decisão."

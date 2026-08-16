@@ -1,11 +1,19 @@
 Arquivo usado apenas para organização de pensamentos (nao deveria estar no repo mas vou deixar por enquanto)
 
+- Uma busca deterministica enquanto o nro de documentos é baixo faz muito sentido
+- Embora eu possa usar busca semantica e filtrar por tópico para não trazer fatos irrelevantes
+
+E para uma primeira versão, faz sentido eu gerar duas ou tres respostas prontas para cada pergunta
 
 - EmbeddingProvider.embed (sentence-transformers) e VectorStore.search (qdrant-client, síncrono) são ambos chamadas bloqueantes.
   Não sei se preciso resolver isso mais tarde ou nao seria um bloqueio tao grande em high traffic, preciso analisar.
 
 - Onde pego documentos para serem importados? Seria interessante baixar alguns capitulos de livros de um topico especifico como 
   Kafka para testar e depois faço o resto.
+
+- para importar:
+    Pra segunda versão um data pipeline poderia ser usado caso eu queira fazer algo muuuito robusto (over engineering por agora, mass TODO)
+    pypdfpara extração simples de texto, ou lib unstructured, que lida com PDF, HTML, DOCX e já devolve texto limpo
 
 - A ideia é ser multi agentes / A2A 
     Orquestrador (conduzindo as fases da entrevista e mantem estado da conversa)
