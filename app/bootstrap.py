@@ -1,0 +1,3 @@
+from app.domains.async_messaging.bootstrap import register_async_messaging_domain
+
+register_async_messaging_domain()

@@ -33,9 +33,9 @@ E para uma primeira versão, faz sentido eu gerar duas ou tres respostas prontas
 
 - Tenho que descobrir porque raios os testes tao demorando tanto. Talvez eu esteja inicializando errado alguma coisa que nao deveria.
 
-- Preciso parar de fazer push na main (amanhã paro kkk)
-    - Criar protected branch pra eu não ficar postergando isso
-    - Usar issues do Github pra eu nao esquecer as coisas
+Preciso parar de fazer push na main (amanhã paro kkk)
+(DONE) - Criar protected branch pra eu não ficar postergando isso
+        - Usar issues do Github pra eu nao esquecer as coisas
 
 - Github Actions pra ao menos rodar os testes e passar black e isort seria bom tb...
     Ai já faço um alias local que ao commitar ja passa a bateria de linting e test pra nao colocar sujeira no repo.

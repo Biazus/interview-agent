@@ -5,12 +5,11 @@ from app.core.domain.registry import DomainEnum, get_domain, register_domain
 from app.core.llm.fallback import FallbackLLMProvider
 from app.core.llm.providers.groq_provider import GroqProvider
 from app.core.llm.providers.openrouter_provider import OpenRouterProvider
-from app.domains.async_messaging import bootstrap
+from app import bootstrap
 
 
 async def main() -> None:
     llm = FallbackLLMProvider([GroqProvider(), OpenRouterProvider()])
-    bootstrap.register_async_messaging_domain()
     domain = get_domain(DomainEnum.ASYNC_MESSAGING)
 
     agent = EvaluatorAgent(
