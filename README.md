@@ -25,8 +25,8 @@ A central **registry** wires domains at startup. The orchestrator picks a domain
 # Install dependencies
 uv sync
 
-# Start Qdrant (and optionally the API)
-docker compose up -d vector-db
+# Start containers
+docker compose up -d
 
 # Run tests
 uv run pytest
