@@ -1,5 +1,10 @@
-from app.core.domain.interfaces import (Chunk, Evaluation, RAGRetriever,
-                                        Rubric, RubricProvider)
+from app.core.domain.interfaces import (
+    Chunk,
+    Evaluation,
+    RAGRetriever,
+    Rubric,
+    RubricProvider,
+)
 from app.core.llm.interfaces import LLMProvider, LLMResponse
 
 
