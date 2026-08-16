@@ -2,8 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 
-from app.core.domain.interfaces import (QuestionBank, RAGRetriever,
-                                        RubricProvider)
+from app.core.domain.interfaces import QuestionBank, RAGRetriever, RubricProvider
 
 """ 
 Uso aqui factories, não instâncias prontas, 

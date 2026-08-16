@@ -1,8 +1,7 @@
 import pytest
 
 from app.core.domain.registry import DomainEnum, get_domain
-from app.domains.async_messaging.bootstrap import \
-    register_async_messaging_domain
+from app.domains.async_messaging.bootstrap import register_async_messaging_domain
 
 
 def test_registry_resolves_async_messaging_domain():

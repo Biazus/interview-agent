@@ -4,8 +4,11 @@ from groq import APIConnectionError, APITimeoutError, AsyncGroq
 from groq import RateLimitError as GroqRateLimitError
 
 from app.core.llm.config import settings
-from app.core.llm.exceptions import (LLMProviderError,
-                                     ProviderUnavailableError, RateLimitError)
+from app.core.llm.exceptions import (
+    LLMProviderError,
+    ProviderUnavailableError,
+    RateLimitError,
+)
 from app.core.llm.interfaces import LLMProvider, LLMResponse
 
 _MODEL = "llama-3.3-70b-versatile"

@@ -4,8 +4,7 @@ from fastapi import Depends, FastAPI
 
 from app.api.dependencies import get_active_domain
 from app.core.domain.registry import DomainModule
-from app.domains.async_messaging.bootstrap import \
-    register_async_messaging_domain
+from app.domains.async_messaging.bootstrap import register_async_messaging_domain
 
 
 @asynccontextmanager
