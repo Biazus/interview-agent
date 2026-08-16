@@ -14,6 +14,8 @@ Arquivo usado apenas para organização de pensamentos (nao deveria estar no rep
     Relator (compila competencias do candidato)
 
 - Tracing de chamadas de LLM, contagem de tokens, compilação de custos por sessao.
+- OpenTelemetry / OpenInference
+- LOGS!!!!!11!
 
 - Ollama não era uma opção até 1h atrás quando vi que o rate limit do openroute é baixissimo...
     Pensando alto, não precisaria ser um modelo tão robusto pra rodar localmente como fallback, portanto preciso avaliar questao de 
@@ -31,5 +33,6 @@ Arquivo usado apenas para organização de pensamentos (nao deveria estar no rep
     Ai já faço um alias local que ao commitar ja passa a bateria de linting e test pra nao colocar sujeira no repo.
 
 - Só de pensar que também falta a parte do frontend, rotas API, db, migrations, auth, rate limit, terraform, aws...
-    Não vejo até então algum caso de uso pra caching. 
     porém não vou escapar de ter que implementar filas pro protocolo A2A, a menos que implemente com HTTP, o que seria feio.
+
+Meta: 4 commits por dia pra eu não postergar isso tudo.
