@@ -28,7 +28,7 @@ class VectorStore:
     def upsert(
         self,
         collection_name: str,
-        ids: list[str],
+        ids: list[int],
         vectors: list[list[float]],
         payloads: list[dict],
     ) -> None:

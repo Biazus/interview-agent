@@ -22,7 +22,7 @@ def ingest_seed_documents() -> None:
     texts = [doc["text"] for doc in documents]
     vectors = embedder.embed_batch(texts)
 
-    ids = [doc["id"] for doc in documents]
+    ids = list(range(len(documents)))
     payloads = [
         {"text": doc["text"], "topic": doc["topic"], "source": doc["id"]}
         for doc in documents
