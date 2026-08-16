@@ -1,0 +1,80 @@
+documents:
+  - id: doc_dlq_01
+    topic: dead_letter_queue
+    text: >
+      Uma Dead Letter Queue (DLQ) no Amazon SQS é uma fila usada por outras
+      filas (as filas de origem) para armazenar mensagens que não puderam
+      ser processadas com sucesso após um número máximo de tentativas,
+      definido pelo atributo maxReceiveCount. Isso evita que uma mensagem
+      "envenenada" fique sendo reprocessada indefinidamente, consumindo
+      capacidade do consumidor e mascarando o problema real, permitindo
+      isolar essas mensagens para inspeção manual ou reprocessamento
+      posterior.
+
+  - id: doc_dlq_02
+    topic: dead_letter_queue
+    text: >
+      A DLQ deve ter o mesmo tipo da fila de origem: uma fila FIFO só pode
+      usar outra fila FIFO como DLQ, e uma fila padrão só pode usar outra
+      fila padrão. Não existe redirecionamento automático entre uma DLQ e
+      a fila original — mover mensagens de volta exige um processo manual
+      ou automatizado explícito, como o recurso de redrive nativo do
+      console/CLI do SQS.
+
+  - id: doc_visibility_01
+    topic: visibility_timeout
+    text: >
+      O visibility timeout é o período durante o qual uma mensagem, após
+      ser recebida por um consumidor via ReceiveMessage, fica invisível
+      para outros consumidores da mesma fila. Se o consumidor original
+      não excluir a mensagem (via DeleteMessage) dentro desse período, ela
+      volta a ficar visível e pode ser entregue novamente, potencialmente
+      a outro consumidor.
+
+  - id: doc_visibility_02
+    topic: visibility_timeout
+    text: >
+      Se o processamento de uma mensagem demorar mais do que o visibility
+      timeout configurado, o SQS pode reentregar essa mesma mensagem
+      enquanto o primeiro consumidor ainda está processando-a, causando
+      processamento duplicado. Para tarefas de duração variável, é
+      possível estender o timeout dinamicamente durante o processamento
+      usando ChangeMessageVisibility, em vez de configurar um valor fixo
+      alto que atrasaria a reentrega em casos de falha real.
+
+  - id: doc_fanout_01
+    topic: fan_out
+    text: >
+      O padrão fan-out combina um tópico SNS com múltiplas filas SQS
+      inscritas nele: uma única mensagem publicada no tópico é entregue
+      automaticamente a todas as filas inscritas, permitindo que
+      diferentes sistemas consumam o mesmo evento de forma independente e
+      paralela, sem que o publicador precise conhecer os consumidores.
+
+  - id: doc_fanout_02
+    topic: fan_out
+    text: >
+      Em uma arquitetura fan-out, cada fila SQS inscrita no tópico SNS
+      processa mensagens no seu próprio ritmo e falhas em uma fila (ou no
+      consumidor dela) não afetam as demais, já que cada fila mantém sua
+      própria cópia da mensagem e seu próprio ciclo de
+      visibility/retry/DLQ, de forma isolada.
+
+  - id: doc_batch_01
+    topic: batch_processing
+    text: >
+      O SQS permite receber até 10 mensagens por chamada via
+      ReceiveMessage (usando MaxNumberOfMessages), e enviar/excluir em
+      lote via SendMessageBatch e DeleteMessageBatch, reduzindo o número
+      de chamadas de API e custo em cenários de alto volume, comparado a
+      processar uma mensagem por chamada.
+
+  - id: doc_batch_02
+    topic: batch_processing
+    text: >
+      Quando uma função Lambda é acionada por SQS em modo de lote, uma
+      falha lançada durante o processamento de qualquer mensagem do lote
+      pode causar reentrega de todo o lote, a menos que a função implemente
+      relatório de falhas parciais de lote (partial batch response),
+      reportando explicitamente quais message IDs falharam para que só
+      essas sejam reenviadas.

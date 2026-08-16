@@ -8,9 +8,9 @@ from app.domains.async_messaging.rubrics import \
 
 def _build_async_messaging_domain() -> DomainModule:
     return DomainModule(
-        retriever=FakeAsyncMessagingRetriever(),
-        question_bank=StaticAsyncMessagingQuestionBank(),
-        rubric_provider=FakeAsyncMessagingRubricProvider(),
+        retriever=QdrantRetriever("async_messaging"),
+        question_bank=None,  # StaticAsyncMessagingQuestionBank(),
+        rubric_provider=None,  # FakeAsyncMessagingRubricProvider(),
     )
 
 
