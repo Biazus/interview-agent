@@ -1,20 +1,28 @@
+from pathlib import Path
+
+import yaml
+
 from app.core.domain.interfaces import Rubric, RubricCriterion
 
+_DATA_PATH = Path(__file__).parent / "data" / "rubrics.yaml"
 
-class FakeAsyncMessagingRubricProvider:
-    """Implementação provisória do RubricProvider, com uma rubrica de exemplo."""
+
+class StaticAsyncMessagingRubricProvider:
+    """Provider de rubricas estático, cobrindo SQS/SNS/Lambda."""
+
+    def __init__(self, data_path: Path = _DATA_PATH) -> None:
+        with open(data_path, encoding="utf-8") as f:
+            raw = yaml.safe_load(f)
+        self._rubrics = {
+            item["topic"]: Rubric(
+                topic=item["topic"],
+                criteria=[RubricCriterion(**c) for c in item["criteria"]],
+            )
+            for item in raw
+        }
 
     def get_rubric(self, topic: str) -> Rubric:
-        return Rubric(
-            topic=topic,
-            criteria=[
-                RubricCriterion(
-                    description="Explica o propósito de uma DLQ",
-                    weak_example="Não sei, acho que guarda mensagens.",
-                    medium_example="Guarda mensagens que deram erro.",
-                    strong_example="Captura mensagens que excederam o número "
-                    "máximo de tentativas (maxReceiveCount), "
-                    "permitindo análise sem bloquear a fila principal.",
-                )
-            ],
-        )
+        rubric = self._rubrics.get(topic)
+        if rubric is None:
+            raise ValueError(f"Nenhuma rubrica encontrada para topic={topic}")
+        return rubric

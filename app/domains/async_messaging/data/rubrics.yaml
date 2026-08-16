@@ -1,0 +1,58 @@
+- topic: dead_letter_queue
+  criteria:
+    - description: "Explica o propósito de uma DLQ"
+      weak_example: "Não sei, acho que guarda mensagens."
+      medium_example: "Guarda mensagens que deram erro."
+      strong_example: "Captura mensagens que excederam o número máximo de
+        tentativas (maxReceiveCount), permitindo análise sem bloquear a fila
+        principal."
+    - description: "Relaciona DLQ com maxReceiveCount"
+      weak_example: "A DLQ tem um limite de tentativas."
+      medium_example: "Depois de X tentativas falhas, a mensagem vai pra DLQ."
+      strong_example: "O maxReceiveCount define quantas vezes a mensagem
+        pode voltar a ficar visível antes de ser movida automaticamente para
+        a DLQ associada; mal configurado (muito baixo), pode mover mensagens
+        válidas prematuramente; muito alto, atrasa a detecção de falhas
+        reais."
+
+- topic: visibility_timeout
+  criteria:
+    - description: "Explica o que é visibility timeout"
+      weak_example: "É um tempo de espera da fila."
+      medium_example: "É o tempo que a mensagem fica invisível enquanto é
+        processada."
+      strong_example: "É o intervalo em que uma mensagem, após ser
+        recebida por um consumidor, fica invisível para outros consumidores
+        na fila, evitando processamento duplicado enquanto o processamento
+        original está em andamento."
+    - description: "Identifica o risco de mal dimensionar o timeout"
+      weak_example: "Se for muito curto, dá erro."
+      medium_example: "Se for muito curto, outro consumidor pode pegar a
+        mesma mensagem de novo."
+      strong_example: "Um timeout menor que o tempo real de processamento
+        causa reentrega e processamento duplicado; um timeout muito longo
+        atrasa a recuperação de mensagens cujo consumidor falhou de fato."
+
+- topic: fan_out
+  criteria:
+    - description: "Explica o padrão fan-out com SNS + SQS"
+      weak_example: "Manda a mensagem pra várias filas."
+      medium_example: "Um tópico SNS envia a mesma mensagem para várias
+        filas SQS inscritas."
+      strong_example: "O padrão fan-out combina um tópico SNS com múltiplas
+        filas SQS inscritas nele, permitindo que um único evento publicado
+        seja distribuído para múltiplos consumidores independentes, cada um
+        processando a mensagem em seu próprio ritmo e isoladamente dos
+        demais."
+
+- topic: batch_processing
+  criteria:
+    - description: "Explica o benefício de processar mensagens em lote"
+      weak_example: "É mais rápido processar várias de uma vez."
+      medium_example: "Reduz o número de chamadas à API, economizando
+        custo."
+      strong_example: "Processar mensagens em lote reduz o número de
+        chamadas de API (e portanto custo e overhead de rede), mas introduz
+        trade-offs: uma falha parcial no lote exige lógica de tratamento
+        granular (identificar quais itens do lote falharam) em vez de
+        simplesmente falhar a mensagem inteira."

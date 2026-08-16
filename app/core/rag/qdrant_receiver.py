@@ -15,7 +15,7 @@ class QdrantRetriever:
         self._embedder = EmbeddingProvider()
         self._store = VectorStore()
 
-    async def retrieve(self, query: str, top_k: int = 3) -> list[Chunk]:
+    def retrieve(self, query: str, top_k: int = 5) -> list[Chunk]:
         query_vector = self._embedder.embed(query)
         results = self._store.search(self._collection_name, query_vector, top_k=top_k)
         return [

@@ -5,8 +5,7 @@ from app.domains.async_messaging.bootstrap import \
     register_async_messaging_domain
 
 
-@pytest.mark.asyncio
-async def test_registry_resolves_async_messaging_domain():
+def test_registry_resolves_async_messaging_domain():
     register_async_messaging_domain()
     domain = get_domain(DomainEnum.ASYNC_MESSAGING)
 
@@ -15,7 +14,7 @@ async def test_registry_resolves_async_messaging_domain():
     )
     assert question.id == "sqs-01"
 
-    chunks = await domain.retriever.retrieve(query="o que é DLQ")
+    chunks = domain.retriever.retrieve(query="o que é DLQ")
     assert len(chunks) > 0
 
     rubric = domain.rubric_provider.get_rubric(topic="dead_letter_queue")
