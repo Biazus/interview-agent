@@ -1,7 +1,7 @@
 from app.core.domain.registry import DomainEnum, DomainModule, register_domain
+from app.core.rag.qdrant_receiver import QdrantRetriever
 from app.domains.async_messaging.question_bank import \
     StaticAsyncMessagingQuestionBank
-from app.domains.async_messaging.retriever import FakeAsyncMessagingRetriever
 from app.domains.async_messaging.rubrics import \
     FakeAsyncMessagingRubricProvider
 
@@ -9,8 +9,8 @@ from app.domains.async_messaging.rubrics import \
 def _build_async_messaging_domain() -> DomainModule:
     return DomainModule(
         retriever=QdrantRetriever("async_messaging"),
-        question_bank=None,  # StaticAsyncMessagingQuestionBank(),
-        rubric_provider=None,  # FakeAsyncMessagingRubricProvider(),
+        question_bank=StaticAsyncMessagingQuestionBank(),
+        rubric_provider=FakeAsyncMessagingRubricProvider(),
     )
 
 
