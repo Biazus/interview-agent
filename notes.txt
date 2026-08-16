@@ -1,0 +1,35 @@
+Arquivo usado apenas para organização de pensamentos (nao deveria estar no repo mas vou deixar por enquanto)
+
+
+- EmbeddingProvider.embed (sentence-transformers) e VectorStore.search (qdrant-client, síncrono) são ambos chamadas bloqueantes.
+  Não sei se preciso resolver isso mais tarde ou nao seria um bloqueio tao grande em high traffic, preciso analisar.
+
+- Onde pego documentos para serem importados? Seria interessante baixar alguns capitulos de livros de um topico especifico como 
+  Kafka para testar e depois faço o resto.
+
+- A ideia é ser multi agentes / A2A 
+    Orquestrador (conduzindo as fases da entrevista e mantem estado da conversa)
+    Seletor (decide mudar de tópico, calibrar dificuldade, avançar etc)
+    Avaliador (usa o RAG para checar resposta do candidato contra as referencias e dar feedback)
+    Relator (compila competencias do candidato)
+
+- Tracing de chamadas de LLM, contagem de tokens, compilação de custos por sessao.
+
+- Ollama não era uma opção até 1h atrás quando vi que o rate limit do openroute é baixissimo...
+    Pensando alto, não precisaria ser um modelo tão robusto pra rodar localmente como fallback, portanto preciso avaliar questao de 
+    custo de recursos computacionais (além do que os models :free do OpenRoute ficam constantemente saindo da lista free então não
+    sei de alguma solução para cobrir isso - não quero fazer webscrapping de algo que nao pertence ao dominio desse projeto...)
+    - Lembrar de não gastar token a toa para nao estourar limit até eu fazer algo em relação a isso (ser pobre é osso)
+
+- Tenho que descobrir porque raios os testes tao demorando tanto. Talvez eu esteja inicializando errado alguma coisa que nao deveria.
+
+- Preciso parar de fazer push na main (amanhã paro kkk)
+    - Criar protected branch pra eu não ficar postergando isso
+    - Usar issues do Github pra eu nao esquecer as coisas
+
+- Github Actions pra ao menos rodar os testes e passar black e isort seria bom tb...
+    Ai já faço um alias local que ao commitar ja passa a bateria de linting e test pra nao colocar sujeira no repo.
+
+- Só de pensar que também falta a parte do frontend, rotas API, db, migrations, auth, rate limit, terraform, aws...
+    Não vejo até então algum caso de uso pra caching. 
+    porém não vou escapar de ter que implementar filas pro protocolo A2A, a menos que implemente com HTTP, o que seria feio.
