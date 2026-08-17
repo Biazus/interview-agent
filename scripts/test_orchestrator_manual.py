@@ -13,8 +13,8 @@ from app.core.llm.providers.openrouter_provider import OpenRouterProvider
 # Respostas fixas propositalmente fracas, para forçar o NaiveSelector a
 # detectar "2 respostas do mesmo nível no mesmo tópico" e tentar trocar de
 # tópico. Como hoje só existe um tópico populado (dead_letter_queue), a troca
-# deve falhar por falta de tópico disponível, encerrando a entrevista — esse
-# é o comportamento esperado a validar neste teste, não um bug.
+# deve falhar por falta de tópico disponível, encerrando a entrevista. esse
+# é o comportamento esperado by the way
 FIXED_ANSWERS = [
     "Não sei bem, acho que é algo relacionado a erro.",
     "Não tenho certeza, sei la",
