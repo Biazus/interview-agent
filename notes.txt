@@ -32,6 +32,11 @@ E para uma primeira versão, faz sentido eu gerar duas ou tres respostas prontas
     - Lembrar de não gastar token a toa para nao estourar limit até eu fazer algo em relação a isso (ser pobre é osso)
 
 - Tenho que descobrir porque raios os testes tao demorando tanto. Talvez eu esteja inicializando errado alguma coisa que nao deveria.
+    FIRST: lineprofiler ou cprofile
+    Cold start do sentence-transformers
+    Ps.: criar singletons/cache para EmbeddingProvider e QdrantRetriever
+    get_domain() recria tudo em cada chamada,
+    Colocar modelo menor na avaliação?
 
 Preciso parar de fazer push na main (amanhã paro kkk)
 (DONE) - Criar protected branch pra eu não ficar postergando isso

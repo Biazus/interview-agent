@@ -11,7 +11,8 @@ from app.core.llm.exceptions import (
 )
 from app.core.llm.interfaces import LLMProvider, LLMResponse
 
-_MODEL = "llama-3.3-70b-versatile"
+_MODEL = "openai/gpt-oss-safeguard-20b"
+_MAX_COMPLETION_TOKENS = 512
 
 
 class GroqProvider(LLMProvider):
@@ -29,7 +30,9 @@ class GroqProvider(LLMProvider):
                 ],
                 model=_MODEL,
                 temperature=params.get("temperature", 0.5),
-                max_completion_tokens=params.get("max_completion_tokens", 1024),
+                max_completion_tokens=params.get(
+                    "max_completion_tokens", _MAX_COMPLETION_TOKENS
+                ),
                 top_p=1,
                 stop=None,
                 stream=False,
@@ -55,9 +58,11 @@ class GroqProvider(LLMProvider):
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": prompt},
                 ],
-                model="llama-3.3-70b-versatile",
+                model=_MODEL,
                 temperature=0.5,
-                max_completion_tokens=1024,
+                max_completion_tokens=params.get(
+                    "max_completion_tokens", _MAX_COMPLETION_TOKENS
+                ),
                 top_p=1,
                 stop=None,
                 stream=True,
