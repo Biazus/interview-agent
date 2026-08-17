@@ -3,17 +3,11 @@ from typing import Protocol
 
 from app.core.llm.interfaces import LLMResponse
 
-"""
-Em RAG (Retrieval-Augmented Generation), você não joga um documento inteiro para o LLM buscar informação.
-Isso estouraria o limite de contexto e sairia caro.
-Em vez disso, o documento é dividido em pedaços menores (chunks) durante a ingestão,
-cada chunk é transformado em um vetor numérico (embedding) que representa seu "significado",
-e esses vetores ficam armazenados no banco vetorial. Quando alguém faz uma pergunta,
-a pergunta também vira um vetor, e o banco vetorial retorna os chunks cujos vetores são mais "próximos"
-(mais similares semanticamente) ao vetor da pergunta. 
-Isso é o retrieval. Depois, esses chunks recuperados são inseridos no prompt do LLM como contexto,
-para ele gerar uma resposta fundamentada neles (a parte "augmented generation")
-"""
+
+@dataclass(frozen=True)
+class SelectorDecision:
+    next_topic: str
+    next_difficulty: int
 
 
 @dataclass(frozen=True)
@@ -63,6 +57,21 @@ class Rubric:
     criteria: list[RubricCriterion] = field(default_factory=list)
 
 
+@dataclass
+class InterviewState:
+    topic: str
+    difficulty: int
+    current_question: Question
+    history: list[tuple[Question, Evaluation]] = field(default_factory=list)
+    finished: bool = False
+
+
+class Selector(Protocol):
+    def decide(
+        self, state: InterviewState, evaluation: Evaluation
+    ) -> SelectorDecision: ...
+
+
 class RAGRetriever(Protocol):
     """Contrato para buscar material de referência relevante no domínio."""
 
@@ -72,7 +81,9 @@ class RAGRetriever(Protocol):
 class QuestionBank(Protocol):
     """Contrato para consultar o banco de perguntas do domínio."""
 
-    def next_question(self, topic: str, difficulty: int) -> Question: ...
+    def next_question(
+        self, topic: str, difficulty: int, exclude_ids: set[str] | None = None
+    ) -> Question: ...
 
     def topics(self) -> list[str]:
         """Lista os tópicos disponíveis neste domínio (ex: ['sqs', 'sns', 'lambda'])."""
