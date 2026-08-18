@@ -20,7 +20,7 @@ class NaiveSelector:
         next_difficulty = self._next_difficulty(state.difficulty, evaluation.level)
 
         if self._should_switch_topic(state):
-            next_topic = self._pick_next_topic(state.topic)
+            next_topic = self._pick_next_topic(state)
             return SelectorDecision(next_topic=next_topic, next_difficulty=1)
 
         return SelectorDecision(next_topic=state.topic, next_difficulty=next_difficulty)
@@ -39,9 +39,11 @@ class NaiveSelector:
         last_levels = [e.level for _, e in same_topic[-_SAME_LEVEL_STREAK:]]
         return len(set(last_levels)) == 1  # todas iguais entre si
 
-    def _pick_next_topic(self, current_topic: str) -> str:
-        topics = self._domain.question_bank.topics()
-        remaining = [t for t in topics if t != current_topic]
+    def _pick_next_topic(self, state: InterviewState) -> str:
+        visited = {q.topic for q, _ in state.history}
+        remaining = [
+            t for t in self._domain.question_bank.topics() if t not in visited
+        ]
         if not remaining:
             raise ValueError("Nenhum outro tópico disponível.")
         return remaining[0]  # estratégia ingênua: primeiro disponível

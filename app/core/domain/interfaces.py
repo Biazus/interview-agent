@@ -57,6 +57,15 @@ class Rubric:
     criteria: list[RubricCriterion] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class CandidateReport:
+    overall_summary: str
+    strengths: list[str]
+    weaknesses: list[str]
+    suggestions: list[str]
+    total_questions: int
+
+
 @dataclass
 class InterviewState:
     topic: str
@@ -64,6 +73,7 @@ class InterviewState:
     current_question: Question
     history: list[tuple[Question, Evaluation]] = field(default_factory=list)
     finished: bool = False
+    report: CandidateReport | None = None
 
 
 class Selector(Protocol):
