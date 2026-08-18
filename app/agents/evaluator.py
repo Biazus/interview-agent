@@ -1,3 +1,6 @@
+import asyncio
+from functools import partial
+
 from app.core.domain.interfaces import (
     Chunk,
     Evaluation,
@@ -25,7 +28,9 @@ class EvaluatorAgent:
 
     async def evaluate(self, topic: str, question: str, answer: str) -> Evaluation:
         rubric = self._rubric_provider.get_rubric(topic)
-        chunks = self._retriever.retrieve(query=answer, top_k=3, topic=topic)
+        chunks = await asyncio.to_thread(
+            partial(self._retriever.retrieve, query=answer, top_k=3, topic=topic)
+        )
 
         prompt = self._build_prompt(question, answer, rubric, chunks)
         response = await self._llm.generate(GenerateRequest.simple(prompt))
