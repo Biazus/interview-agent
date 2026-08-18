@@ -41,9 +41,7 @@ class NaiveSelector:
 
     def _pick_next_topic(self, state: InterviewState) -> str:
         visited = {q.topic for q, _ in state.history}
-        remaining = [
-            t for t in self._domain.question_bank.topics() if t not in visited
-        ]
+        remaining = [t for t in self._domain.question_bank.topics() if t not in visited]
         if not remaining:
             raise ValueError("Nenhum outro tópico disponível.")
         return remaining[0]  # estratégia ingênua: primeiro disponível

@@ -1,6 +1,11 @@
 from app.agents.evaluator import EvaluatorAgent
 from app.agents.reporting import ReportingAgent
-from app.core.domain.interfaces import CandidateReport, InterviewState, Question, Selector
+from app.core.domain.interfaces import (
+    CandidateReport,
+    InterviewState,
+    Question,
+    Selector,
+)
 from app.core.domain.registry import DomainModule
 from app.core.llm.interfaces import LLMProvider
 
@@ -13,7 +18,9 @@ class InterviewNotFinishedError(Exception):
 
 
 class OrchestratorAgent:
-    def __init__(self, domain: DomainModule, llm: LLMProvider, selector: Selector) -> None:
+    def __init__(
+        self, domain: DomainModule, llm: LLMProvider, selector: Selector
+    ) -> None:
         self._domain = domain
         self._selector = selector
         self._evaluator = EvaluatorAgent(
@@ -65,7 +72,9 @@ class OrchestratorAgent:
 
     def start(self, topic: str, difficulty: int = 1) -> InterviewState:
         question = self._domain.question_bank.next_question(topic, difficulty)
-        return InterviewState(topic=topic, difficulty=difficulty, current_question=question)
+        return InterviewState(
+            topic=topic, difficulty=difficulty, current_question=question
+        )
 
     async def submit_answer(self, state: InterviewState, answer: str) -> InterviewState:
         evaluation = await self._evaluator.evaluate(
@@ -96,7 +105,9 @@ class OrchestratorAgent:
             exclude_topics=exclude_topics,
         )
         if question is None:
-            print("Não foi possível encontrar uma próxima pergunta. Encerrando a entrevista.")
+            print(
+                "Não foi possível encontrar uma próxima pergunta. Encerrando a entrevista."
+            )
             state.finished = True
             return state
 

@@ -21,24 +21,28 @@ class OpenRouterProvider:
         )
 
     async def generate(self, prompt: str, **params) -> LLMResponse:
+        create_kwargs: dict = {
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            "model": params.get("model", _MODEL),
+            "temperature": params.get("temperature", 0.5),
+            "max_tokens": params.get("max_tokens", 1024),
+            "stream": False,
+        }
+        if "response_format" in params:
+            create_kwargs["response_format"] = params["response_format"]
         try:
-            response = await self.client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": prompt},
-                ],
-                model=params.get("model", _MODEL),
-                temperature=params.get("temperature", 0.5),
-                max_tokens=params.get("max_tokens", 1024),
-                stream=False,
-            )
+            response = await self.client.chat.completions.create(**create_kwargs)
         except OpenAIRateLimitError as e:
             raise RateLimitError(f"OpenRouter rate limit: {e}") from e
         except (APIConnectionError, APITimeoutError) as e:
             raise ProviderUnavailableError(f"OpenRouter indisponível: {e}") from e
 
+        content = response.choices[0].message.content or ""
         return LLMResponse(
-            text=response.choices[0].message.content,
+            text=content,
             provider=self.name,
             model=response.model,
             tokens_used=response.usage.total_tokens if response.usage else None,

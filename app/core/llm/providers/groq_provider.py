@@ -22,28 +22,31 @@ class GroqProvider(LLMProvider):
         self.client = client or AsyncGroq(api_key=settings.GROQ_API_KEY)
 
     async def generate(self, prompt: str, **params) -> LLMResponse:
+        create_kwargs: dict = {
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            "model": _MODEL,
+            "temperature": params.get("temperature", 0.5),
+            "max_completion_tokens": params.get(
+                "max_completion_tokens", _MAX_COMPLETION_TOKENS
+            ),
+            "top_p": 1,
+            "stop": None,
+            "stream": False,
+        }
+        if "response_format" in params:
+            create_kwargs["response_format"] = params["response_format"]
         try:
-            response = await self.client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": prompt},
-                ],
-                model=_MODEL,
-                temperature=params.get("temperature", 0.5),
-                max_completion_tokens=params.get(
-                    "max_completion_tokens", _MAX_COMPLETION_TOKENS
-                ),
-                top_p=1,
-                stop=None,
-                stream=False,
-            )
+            response = await self.client.chat.completions.create(**create_kwargs)
         except GroqRateLimitError as e:
             raise RateLimitError(f"Groq rate limit: {e}") from e
 
         except (APIConnectionError, APITimeoutError) as e:
             raise ProviderUnavailableError(f"Groq indisponível: {e}") from e
 
-        choice = response.choices[0].message.content
+        choice = response.choices[0].message.content or ""
         return LLMResponse(
             text=choice,
             provider=self.name,

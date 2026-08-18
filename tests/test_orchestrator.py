@@ -73,7 +73,9 @@ def test_resolve_exhausted_difficulty_one_finds_same_topic_level_two(
 def test_resolve_skips_excluded_topics_when_cross_topic_fallback(
     orchestrator: OrchestratorAgent, question_bank: StaticAsyncMessagingQuestionBank
 ):
-    batch_ids = {q.id for q in question_bank._questions if q.topic == "batch_processing"}
+    batch_ids = {
+        q.id for q in question_bank._questions if q.topic == "batch_processing"
+    }
     question = orchestrator._resolve_next_question(
         "batch_processing",
         1,

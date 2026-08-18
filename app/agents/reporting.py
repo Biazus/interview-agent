@@ -1,19 +1,23 @@
-from dataclasses import dataclass
-
-from app.core.domain.interfaces import Evaluation, InterviewState, Question, CandidateReport
+from app.agents.reporting_schema import ReportLLMOutput
+from app.core.domain.interfaces import (
+    CandidateReport,
+    Evaluation,
+    InterviewState,
+    Question,
+)
 from app.core.llm.interfaces import LLMProvider
+from app.core.llm.structured import generate_structured
 
-_SYSTEM_PROMPT = """Você é um Relator de entrevistas técnicas. Sua tarefa é compilar
-o histórico de perguntas e avaliações de um candidato em um relatório final,
-humanizado, destacando pontos fortes, pontos fracos e sugestões de estudo
-para futuras entrevistas.
+_SYSTEM_PROMPT = """Você é um Relator de entrevistas técnicas. Compila o histórico em um
+relatório final, humanizado, com pontos fortes, fracos e sugestões de estudo.
 
-Responda EXATAMENTE no formato abaixo, sem texto fora dele:
+Responda SOMENTE com um objeto JSON válido, sem markdown nem texto fora do JSON.
+Use exatamente estas chaves em português:
 
-RESUMO: <um parágrafo corrido resumindo o desempenho geral do candidato>
-PONTOS_FORTES: <item 1> | <item 2> | <item 3>
-PONTOS_FRACOS: <item 1> | <item 2> | <item 3>
-SUGESTOES: <item 1> | <item 2> | <item 3>
+- "resumo": string com até 2 frases curtas sobre o desempenho geral
+- "pontos_fortes": array de strings (até 3 itens curtos)
+- "pontos_fracos": array de strings (até 3 itens curtos)
+- "sugestoes": array de strings (até 3 itens curtos)
 """
 
 
@@ -29,35 +33,14 @@ class ReportingAgent:
         transcript = self._build_transcript(state.history)
         prompt = f"{_SYSTEM_PROMPT}\n\nHistórico da entrevista:\n{transcript}"
 
-        response = await self._llm.generate(prompt)
-        print("--- RAW LLM RESPONSE ---")
-        print(repr(response.text))
-        print("--- END RAW ---")
-        return self._parse_response(response.text, total_questions=len(state.history))
+        output = await generate_structured(self._llm, prompt, ReportLLMOutput)
+        return output.to_candidate_report(total_questions=len(state.history))
 
     def _build_transcript(self, history: list[tuple[Question, Evaluation]]) -> str:
         lines = []
         for i, (question, evaluation) in enumerate(history, start=1):
             lines.append(
-                f"{i}. [{question.topic}] Pergunta: {question.prompt}\n"
-                f"   Nível: {evaluation.level} | Feedback: {evaluation.feedback}"
+                f"{i}. [{question.topic}] nível={evaluation.level} | "
+                f"feedback: {evaluation.feedback}"
             )
         return "\n".join(lines)
-
-    def _parse_response(self, text: str, total_questions: int) -> CandidateReport:
-        fields: dict[str, str] = {}
-        for line in text.strip().splitlines():
-            if ":" in line:
-                key, _, value = line.partition(":")
-                fields[key.strip().upper()] = value.strip()
-
-        return CandidateReport(
-            overall_summary=fields.get("RESUMO", ""),
-            strengths=self._split_items(fields.get("PONTOS_FORTES", "")),
-            weaknesses=self._split_items(fields.get("PONTOS_FRACOS", "")),
-            suggestions=self._split_items(fields.get("SUGESTOES", "")),
-            total_questions=total_questions,
-        )
-
-    def _split_items(self, raw: str) -> list[str]:
-        return [item.strip() for item in raw.split("|") if item.strip()]
