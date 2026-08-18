@@ -5,6 +5,7 @@ import pytest
 from pydantic import BaseModel, Field
 
 from app.core.llm.exceptions import StructuredOutputError
+from app.core.llm.requests import DEFAULT_MAX_OUTPUT_TOKENS, GenerateRequest
 from app.core.llm.structured import generate_structured
 
 
@@ -26,10 +27,11 @@ async def test_generate_structured_validates_json():
     assert result.resumo == "ok"
     assert result.items == ["a", "b"]
     llm.generate.assert_awaited_once()
-    call_kwargs = llm.generate.await_args.kwargs
-    assert call_kwargs["response_format"] == {"type": "json_object"}
-    assert call_kwargs["max_completion_tokens"] == 1024
-    assert call_kwargs["max_tokens"] == 1024
+    request = llm.generate.await_args.args[0]
+    assert isinstance(request, GenerateRequest)
+    assert request.prompt == "prompt"
+    assert request.response_format == {"type": "json_object"}
+    assert request.max_output_tokens == DEFAULT_MAX_OUTPUT_TOKENS
 
 
 @pytest.mark.asyncio

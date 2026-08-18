@@ -5,7 +5,8 @@ from app.core.domain.interfaces import (
     Rubric,
     RubricProvider,
 )
-from app.core.llm.interfaces import LLMProvider, LLMResponse
+from app.core.llm.interfaces import LLMProvider
+from app.core.llm.requests import GenerateRequest
 
 
 class EvaluatorAgent:
@@ -27,7 +28,7 @@ class EvaluatorAgent:
         chunks = self._retriever.retrieve(query=answer, top_k=3, topic=topic)
 
         prompt = self._build_prompt(question, answer, rubric, chunks)
-        response = await self._llm.generate(prompt)
+        response = await self._llm.generate(GenerateRequest.simple(prompt))
         level, feedback = self._parse_response(response.text)
 
         return Evaluation(
