@@ -31,9 +31,14 @@ class ReportingAgent:
 
     async def generate_report(self, state: InterviewState) -> CandidateReport:
         transcript = self._build_transcript(state.history)
-        prompt = f"{_SYSTEM_PROMPT}\n\nHistórico da entrevista:\n{transcript}"
+        prompt = f"Histórico da entrevista:\n{transcript}"
 
-        output = await generate_structured(self._llm, prompt, ReportLLMOutput)
+        output = await generate_structured(
+            self._llm,
+            prompt,
+            ReportLLMOutput,
+            system_prompt=_SYSTEM_PROMPT,
+        )
         return output.to_candidate_report(total_questions=len(state.history))
 
     def _build_transcript(self, history: list[tuple[Question, Evaluation]]) -> str:

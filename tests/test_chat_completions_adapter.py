@@ -12,7 +12,7 @@ from app.core.llm.providers.chat_completions_adapter import (
     ChatCompletionsAdapter,
     SdkErrorTypes,
 )
-from app.core.llm.requests import GenerateRequest, StreamRequest
+from app.core.llm.requests import DEFAULT_SYSTEM_PROMPT, GenerateRequest, StreamRequest
 
 
 class _FakeRateLimitError(Exception):
@@ -76,7 +76,7 @@ async def test_generate_returns_llm_response():
     assert result.tokens_used == 10
     client.chat.completions.create.assert_awaited_once()
     call_kwargs = client.chat.completions.create.await_args.kwargs
-    assert call_kwargs["messages"][0]["content"] == "You are a helpful assistant."
+    assert call_kwargs["messages"][0]["content"] == DEFAULT_SYSTEM_PROMPT
     assert call_kwargs["messages"][1]["content"] == "hi"
 
 

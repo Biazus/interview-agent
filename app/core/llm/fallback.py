@@ -9,8 +9,10 @@ logger = logging.getLogger(__name__)
 
 
 class FallbackLLMProvider:
-    """Tenta cada provider em ordem; passa para o próximo em caso de falha.
-    -  *Chain of Responsibility*
+    """Tenta cada provider em ordem; passa para o próximo em falhas transientes.
+
+    Só ``TransientProviderError`` (rate limit, rede, 5xx) aciona o próximo provider.
+    ``PermanentProviderError`` (auth, request inválido) interrompe a cadeia imediatamente.
     """
 
     name = "fallback_chain"

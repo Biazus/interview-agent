@@ -1,9 +1,11 @@
+"""Tipos de request para chamadas LLM — normalizam params entre providers."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
 
-DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant."
+DEFAULT_SYSTEM_PROMPT = "You are an interviewer assistant."
 DEFAULT_MAX_OUTPUT_TOKENS = 1024
 
 
