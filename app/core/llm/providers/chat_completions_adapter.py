@@ -26,6 +26,12 @@ class SdkErrorTypes:
 
 
 class ChatCompletionsAdapter(ABC):
+    """Adapter base para APIs chat/completions (OpenAI-compatible).
+
+    Subclasses implementam só o mapeamento de kwargs do SDK e tipos de exceção;
+    generate/stream, mensagens, resposta e tradução de erros ficam centralizados.
+    """
+
     name: str
     default_model: str
 
