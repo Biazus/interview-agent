@@ -11,6 +11,8 @@ from app.domains.async_messaging.bootstrap import register_async_messaging_domai
 async def lifespan(app: FastAPI):
     # Startup: registra todos os domínios disponíveis
     register_async_messaging_domain()
+    # Preload: carrega embedder/retriever antes da primeira request HTTP
+    get_active_domain()
     yield
     # Shutdown: nada a limpar por enquanto
 

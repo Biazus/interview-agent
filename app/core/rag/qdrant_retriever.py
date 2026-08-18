@@ -10,10 +10,21 @@ class QdrantRetriever:
     consultar.
     """
 
-    def __init__(self, collection_name: str) -> None:
+    def __init__(
+        self,
+        collection_name: str,
+        *,
+        embedder: EmbeddingProvider | None = None,
+        store: VectorStore | None = None,
+    ) -> None:
         self._collection_name = collection_name
-        self._embedder = EmbeddingProvider()
-        self._store = VectorStore()
+        if embedder is None or store is None:
+            from app.core.rag.factory import get_embedding_provider, get_vector_store
+
+            embedder = embedder or get_embedding_provider()
+            store = store or get_vector_store()
+        self._embedder = embedder
+        self._store = store
 
     def retrieve(
         self, query: str, top_k: int = 5, topic: str | None = None
