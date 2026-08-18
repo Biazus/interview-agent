@@ -28,7 +28,6 @@ class Question:
     topic: str  # ex: "fan_out"
     difficulty: int  # ex: 1 (fácil) a 5 (difícil)
     prompt: str  # o texto da pergunta em si
-    follow_up_of: str | None = None  # id da pergunta anterior, se for aprofundamento
 
 
 @dataclass(frozen=True)
@@ -68,6 +67,8 @@ class CandidateReport:
 
 @dataclass
 class InterviewState:
+    # TODO Separar InterviewSession (metadados + flags)
+    # de InterviewHistory (append-only) facilitaria persistência e testes E2E depois.
     topic: str
     difficulty: int
     current_question: Question
@@ -85,7 +86,7 @@ class Selector(Protocol):
 class RAGRetriever(Protocol):
     """Contrato para buscar material de referência relevante no domínio."""
 
-    def retrieve(self, query: str, top_k: int = 5) -> list[Chunk]: ...
+    def retrieve(self, query: str, topic: str, top_k: int = 5) -> list[Chunk]: ...
 
 
 class QuestionBank(Protocol):

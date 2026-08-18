@@ -10,6 +10,9 @@ _DATA_PATH = Path(__file__).parent / "data" / "rubrics.yaml"
 class StaticAsyncMessagingRubricProvider:
     """Provider de rubricas estático, cobrindo SQS/SNS/Lambda."""
 
+    # TODO: não implementa RubricProvider nominalmente
+    # (Inconsistência com QuestionBank)
+
     def __init__(self, data_path: Path = _DATA_PATH) -> None:
         with open(data_path, encoding="utf-8") as f:
             raw = yaml.safe_load(f)

@@ -59,6 +59,10 @@ class EvaluatorAgent:
         )
 
     def _parse_response(self, text: str) -> tuple[str, str]:
+        # TODO: O evaluator faz fallback silencioso para "medium"
+        # quando o parsing falha. Isso é um problema,
+        # pois o evaluator deve levantar uma exceção ou tratar
+        # o erro de forma adequada.
         level = "medium"
         feedback = text.strip()
         for line in text.splitlines():

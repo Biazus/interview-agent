@@ -1,6 +1,6 @@
 import asyncio
 
-from app.core.rag.qdrant_receiver import QdrantRetriever
+from app.core.rag.qdrant_retriever import QdrantRetriever
 from app.domains.async_messaging.rag_ingestion import ingest_seed_documents
 
 

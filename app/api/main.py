@@ -18,9 +18,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Interview Agent API", lifespan=lifespan)
 
 
-app = FastAPI(title="Interview Agent API")
-
-
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
