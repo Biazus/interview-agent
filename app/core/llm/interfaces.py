@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import AsyncIterator, Protocol
 
+from app.core.llm.requests import GenerateRequest, StreamRequest
+
 
 @dataclass(frozen=True)
 class LLMResponse:
@@ -13,9 +15,9 @@ class LLMResponse:
 class LLMProvider(Protocol):
     name: str
 
-    async def generate(self, prompt: str, **params) -> LLMResponse: ...
+    async def generate(self, request: GenerateRequest) -> LLMResponse: ...
 
-    async def stream(self, prompt: str, **params) -> AsyncIterator[str]:
+    async def stream(self, request: StreamRequest) -> AsyncIterator[str]:
         # se o provider falhar depois de já ter emitido alguns chunks (ex: conexão cai no meio),
         # esse código atual reinicia do zero no próximo provider, o que pode gerar uma resposta
         # com início duplicado ao usuário. É uma limitação conhecida e aceitável por agora
