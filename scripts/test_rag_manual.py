@@ -1,6 +1,6 @@
 import asyncio
 
-from app.core.rag.qdrant_retriever import QdrantRetriever
+from app.core.rag.factory import get_qdrant_retriever
 from app.domains.async_messaging.rag_ingestion import ingest_seed_documents
 
 
@@ -9,7 +9,7 @@ async def main():
     ingest_seed_documents()
 
     print("\n--- Busca de teste ---")
-    retriever = QdrantRetriever("async_messaging")
+    retriever = get_qdrant_retriever("async_messaging")
 
     queries = [
         "Uma Dead Letter Queue (DLQ) no Amazon SQS é uma fila usada por outras filas (as filas de origem) para armazenar mensagens que não puderam ser processadas com sucesso",

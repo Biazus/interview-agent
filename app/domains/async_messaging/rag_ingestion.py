@@ -2,8 +2,7 @@ from pathlib import Path
 
 import yaml
 
-from app.core.rag.embeddings import EmbeddingProvider
-from app.core.rag.vector_store import VectorStore
+from app.core.rag.factory import get_embedding_provider, get_vector_store
 
 _COLLECTION_NAME = "async_messaging"
 _SEED_PATH = Path(__file__).parent / "rag_seed.yaml"
@@ -14,8 +13,8 @@ def ingest_seed_documents() -> None:
         data = yaml.safe_load(f)
 
     documents = data["documents"]
-    embedder = EmbeddingProvider()
-    store = VectorStore()
+    embedder = get_embedding_provider()
+    store = get_vector_store()
 
     store.ensure_collection(_COLLECTION_NAME)
 
