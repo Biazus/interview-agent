@@ -46,6 +46,11 @@ def register_domain(domain: DomainEnum, factory: Callable[[], DomainModule]) -> 
     _registry[domain] = factory
 
 
+def clear_registry() -> None:
+    """Limpa o registry. Destinado a testes que precisam de isolamento entre casos."""
+    _registry.clear()
+
+
 def get_domain(domain: DomainEnum) -> DomainModule:
     """Resolve e instancia o módulo de domínio solicitado.
     ps.: aqui chamamos factory() a cada invocação, ou seja, cada chamada gera

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import yaml
 
-from app.core.domain.interfaces import Question, QuestionBank
+from app.core.domain.interfaces import Question
 
 _DATA_PATH = Path(__file__).parent / "data" / "questions.yaml"
 

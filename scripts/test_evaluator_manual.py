@@ -1,8 +1,7 @@
 import asyncio
 
-from app import bootstrap
 from app.agents.evaluator import EvaluatorAgent
-from app.core.domain.registry import DomainEnum, get_domain, register_domain
+from app.core.domain.registry import DomainEnum, get_domain
 from app.core.llm.fallback import FallbackLLMProvider
 from app.core.llm.providers.groq_provider import GroqProvider
 from app.core.llm.providers.openrouter_provider import OpenRouterProvider

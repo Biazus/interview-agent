@@ -1,0 +1,16 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.1
+    hooks:
+      - id: ruff # Replaces isort and flake8
+        args: [ --fix ]
+      - id: ruff-format # Replaces black
+
+  - repo: local
+    hooks:
+      - id: tests
+        name: run tests
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        always_run: true
