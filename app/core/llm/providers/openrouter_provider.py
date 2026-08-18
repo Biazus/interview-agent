@@ -1,72 +1,55 @@
-from typing import AsyncIterator
+from typing import Any
 
-from openai import APIConnectionError, APITimeoutError, AsyncOpenAI
+from openai import (
+    APIConnectionError,
+    APIStatusError,
+    APITimeoutError,
+    AsyncOpenAI,
+    AuthenticationError,
+    BadRequestError,
+)
 from openai import RateLimitError as OpenAIRateLimitError
 
 from app.core.llm.config import settings
-from app.core.llm.exceptions import ProviderUnavailableError, RateLimitError
-from app.core.llm.interfaces import LLMResponse
+from app.core.llm.providers.chat_completions_adapter import (
+    ChatCompletionsAdapter,
+    SdkErrorTypes,
+)
+from app.core.llm.requests import ChatRequest
 
 _MODEL = "nvidia/nemotron-3.5-lightning:free"
 _BASE_URL = "https://openrouter.ai/api/v1"
 
 
-class OpenRouterProvider:
+class OpenRouterProvider(ChatCompletionsAdapter):
     name = "openrouter"
+    default_model = _MODEL
 
     def __init__(self, client: AsyncOpenAI | None = None) -> None:
-        self.client = client or AsyncOpenAI(
-            api_key=settings.OPENROUTER_API_KEY,
-            base_url=_BASE_URL,
-        )
-
-    async def generate(self, prompt: str, **params) -> LLMResponse:
-        # TODO: remover system prompt genérico e passar como parâmetro
-        create_kwargs: dict = {
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            "model": params.get("model", _MODEL),
-            "temperature": params.get("temperature", 0.5),
-            "max_tokens": params.get("max_tokens", 1024),
-            "stream": False,
-        }
-        if "response_format" in params:
-            create_kwargs["response_format"] = params["response_format"]
-        try:
-            response = await self.client.chat.completions.create(**create_kwargs)
-        except OpenAIRateLimitError as e:
-            raise RateLimitError(f"OpenRouter rate limit: {e}") from e
-        except (APIConnectionError, APITimeoutError) as e:
-            raise ProviderUnavailableError(f"OpenRouter indisponível: {e}") from e
-
-        content = response.choices[0].message.content or ""
-        return LLMResponse(
-            text=content,
-            provider=self.name,
-            model=response.model,
-            tokens_used=response.usage.total_tokens if response.usage else None,
-        )
-
-    async def stream(self, prompt: str, **params) -> AsyncIterator[str]:
-        try:
-            stream = await self.client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": prompt},
-                ],
-                model=params.get("model", _MODEL),
-                temperature=params.get("temperature", 0.5),
-                max_tokens=params.get("max_tokens", 1024),
-                stream=True,
+        super().__init__(
+            client
+            or AsyncOpenAI(
+                api_key=settings.OPENROUTER_API_KEY,
+                base_url=_BASE_URL,
             )
-        except OpenAIRateLimitError as e:
-            raise RateLimitError(f"OpenRouter rate limit: {e}") from e
-        except (APIConnectionError, APITimeoutError) as e:
-            raise ProviderUnavailableError(f"OpenRouter indisponível: {e}") from e
+        )
 
-        async for chunk in stream:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                yield delta
+    def _sdk_error_types(self) -> SdkErrorTypes:
+        return SdkErrorTypes(
+            rate_limit=OpenAIRateLimitError,
+            connection=(APIConnectionError, APITimeoutError),
+            authentication=AuthenticationError,
+            bad_request=BadRequestError,
+            api_status=APIStatusError,
+        )
+
+    def _build_create_kwargs(
+        self, request: ChatRequest, stream: bool
+    ) -> dict[str, Any]:
+        return {
+            "messages": self._build_messages(request),
+            "model": request.model or self.default_model,
+            "temperature": request.temperature,
+            "max_tokens": request.max_output_tokens,
+            "stream": stream,
+        }

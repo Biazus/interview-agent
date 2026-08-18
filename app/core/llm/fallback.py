@@ -1,8 +1,9 @@
 import logging
 from typing import AsyncIterator
 
-from app.core.llm.exceptions import LLMProviderError
+from app.core.llm.exceptions import LLMProviderError, TransientProviderError
 from app.core.llm.interfaces import LLMProvider, LLMResponse
+from app.core.llm.requests import GenerateRequest, StreamRequest
 
 logger = logging.getLogger(__name__)
 
@@ -19,34 +20,36 @@ class FallbackLLMProvider:
             raise ValueError("FallbackLLMProvider precisa de ao menos um provider")
         self._providers = providers
 
-    async def generate(self, prompt: str, **params) -> LLMResponse:
-        last_error: Exception | None = None
+    async def generate(self, request: GenerateRequest) -> LLMResponse:
+        last_error: TransientProviderError | None = None
         for provider in self._providers:
             try:
-                return await provider.generate(prompt, **params)
-            except LLMProviderError as e:
+                return await provider.generate(request)
+            except TransientProviderError as e:
                 logger.warning(
                     f"Provider '{provider.name}' falhou: {e}. Tentando próximo."
                 )
                 last_error = e
                 continue
         raise LLMProviderError(
-            f"Todos os providers da cadeia falharam. Último erro: {last_error}"
+            f"Todos os providers da cadeia falharam. "
+            f"Último erro ({type(last_error).__name__}): {last_error}"
         )
 
-    async def stream(self, prompt: str, **params) -> AsyncIterator[str]:
-        last_error: Exception | None = None
+    async def stream(self, request: StreamRequest) -> AsyncIterator[str]:
+        last_error: TransientProviderError | None = None
         for provider in self._providers:
             try:
-                async for chunk in provider.stream(prompt, **params):
+                async for chunk in provider.stream(request):
                     yield chunk
                 return
-            except LLMProviderError as e:
+            except TransientProviderError as e:
                 logger.warning(
                     f"Provider '{provider.name}' falhou no streaming: {e}. Tentando próximo."
                 )
                 last_error = e
                 continue
         raise LLMProviderError(
-            f"Todos os providers da cadeia falharam no streaming. Último erro: {last_error}"
+            f"Todos os providers da cadeia falharam no streaming. "
+            f"Último erro ({type(last_error).__name__}): {last_error}"
         )

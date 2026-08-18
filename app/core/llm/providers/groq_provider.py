@@ -1,81 +1,50 @@
-from typing import AsyncIterator
+from typing import Any
 
-from groq import APIConnectionError, APITimeoutError, AsyncGroq
+from groq import (
+    APIConnectionError,
+    APIStatusError,
+    APITimeoutError,
+    AsyncGroq,
+    AuthenticationError,
+    BadRequestError,
+)
 from groq import RateLimitError as GroqRateLimitError
 
 from app.core.llm.config import settings
-from app.core.llm.exceptions import (
-    LLMProviderError,
-    ProviderUnavailableError,
-    RateLimitError,
+from app.core.llm.providers.chat_completions_adapter import (
+    ChatCompletionsAdapter,
+    SdkErrorTypes,
 )
-from app.core.llm.interfaces import LLMResponse
+from app.core.llm.requests import ChatRequest
 
 _MODEL = "openai/gpt-oss-safeguard-20b"
-_MAX_COMPLETION_TOKENS = 512
 
 
-class GroqProvider:
+class GroqProvider(ChatCompletionsAdapter):
     name = "groq"
+    default_model = _MODEL
 
     def __init__(self, client: AsyncGroq | None = None) -> None:
-        self.client = client or AsyncGroq(api_key=settings.GROQ_API_KEY)
+        super().__init__(client or AsyncGroq(api_key=settings.GROQ_API_KEY))
 
-    async def generate(self, prompt: str, **params) -> LLMResponse:
-        create_kwargs: dict = {
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            "model": _MODEL,
-            "temperature": params.get("temperature", 0.5),
-            "max_completion_tokens": params.get(
-                "max_completion_tokens", _MAX_COMPLETION_TOKENS
-            ),
-            "top_p": 1,
-            "stop": None,
-            "stream": False,
-        }
-        if "response_format" in params:
-            create_kwargs["response_format"] = params["response_format"]
-        try:
-            response = await self.client.chat.completions.create(**create_kwargs)
-        except GroqRateLimitError as e:
-            raise RateLimitError(f"Groq rate limit: {e}") from e
-
-        except (APIConnectionError, APITimeoutError) as e:
-            raise ProviderUnavailableError(f"Groq indisponível: {e}") from e
-
-        choice = response.choices[0].message.content or ""
-        return LLMResponse(
-            text=choice,
-            provider=self.name,
-            model=response.model,
-            tokens_used=response.usage.total_tokens if response.usage else None,
+    def _sdk_error_types(self) -> SdkErrorTypes:
+        return SdkErrorTypes(
+            rate_limit=GroqRateLimitError,
+            connection=(APIConnectionError, APITimeoutError),
+            authentication=AuthenticationError,
+            bad_request=BadRequestError,
+            api_status=APIStatusError,
         )
 
-    async def stream(self, prompt: str, **params) -> AsyncIterator[str]:
-        try:
-            stream = await self.client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": prompt},
-                ],
-                model=_MODEL,
-                temperature=0.5,
-                max_completion_tokens=params.get(
-                    "max_completion_tokens", _MAX_COMPLETION_TOKENS
-                ),
-                top_p=1,
-                stop=None,
-                stream=True,
-            )
-        except GroqRateLimitError as e:
-            raise RateLimitError(f"Groq rate limit: {e}") from e
-        except (APIConnectionError, APITimeoutError) as e:
-            raise ProviderUnavailableError(f"Groq indisponível: {e}") from e
-
-        async for chunk in stream:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                yield delta
+    def _build_create_kwargs(
+        self, request: ChatRequest, stream: bool
+    ) -> dict[str, Any]:
+        return {
+            "messages": self._build_messages(request),
+            "model": request.model or self.default_model,
+            "temperature": request.temperature,
+            "max_completion_tokens": request.max_output_tokens,
+            "top_p": 1,
+            "stop": None,
+            "stream": stream,
+        }
