@@ -33,11 +33,14 @@ jobs:
       - name: Seed Qdrant
         run: uv run python -c "from app.domains.async_messaging.rag_ingestion import ingest_seed_documents; ingest_seed_documents()"
 
-      - name: Run tests
-        run: uv run pytest
+      - name: Run unit tests
+        run: uv run pytest tests/unit
 
-      - name: Check formatting (black)
-        run: uv run black --check .
+      - name: Run integration tests
+        run: uv run pytest tests/integration
 
-      - name: Check import sorting (isort)
-        run: uv run isort --check .
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Check formatting (ruff)
+        run: uv run ruff format --check .

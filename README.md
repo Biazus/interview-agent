@@ -29,7 +29,9 @@ uv sync
 docker compose up -d
 
 # Run tests
-uv run pytest
+uv run pytest tests/unit          # rápido, sem Qdrant
+uv run pytest tests/integration   # RAG (requer docker compose up -d + seed)
+uv run pytest                     # tudo
 ```
 
 ## Project layout

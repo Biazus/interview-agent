@@ -1,26 +1,15 @@
 import pytest
 
 from app.agents.orchestrator import OrchestratorAgent
+from app.core.domain.interfaces import Evaluation, InterviewState
 from app.core.domain.registry import DomainModule
-from app.domains.async_messaging.bootstrap import register_async_messaging_domain
+from app.core.llm.interfaces import LLMResponse
 from app.domains.async_messaging.question_bank import StaticAsyncMessagingQuestionBank
-from app.domains.async_messaging.rubrics import StaticAsyncMessagingRubricProvider
 
 
 @pytest.fixture
-def question_bank() -> StaticAsyncMessagingQuestionBank:
-    return StaticAsyncMessagingQuestionBank()
-
-
-@pytest.fixture
-def orchestrator(question_bank: StaticAsyncMessagingQuestionBank) -> OrchestratorAgent:
-    register_async_messaging_domain()
-    domain = DomainModule(
-        retriever=None,  # type: ignore[arg-type]
-        question_bank=question_bank,
-        rubric_provider=StaticAsyncMessagingRubricProvider(),
-    )
-    return OrchestratorAgent(domain=domain, llm=None, selector=None)  # type: ignore[arg-type]
+def orchestrator(domain_module: DomainModule) -> OrchestratorAgent:
+    return OrchestratorAgent(domain=domain_module, llm=None, selector=None)  # type: ignore[arg-type]
 
 
 def test_resolve_falls_back_to_higher_difficulty_same_topic(
@@ -88,17 +77,11 @@ def test_resolve_skips_excluded_topics_when_cross_topic_fallback(
 
 def test_selector_pick_next_topic_skips_visited_topics(
     question_bank: StaticAsyncMessagingQuestionBank,
+    domain_module: DomainModule,
 ):
     from app.agents.selector_naive import NaiveSelector
-    from app.core.domain.interfaces import Evaluation, InterviewState
-    from app.core.llm.interfaces import LLMResponse
 
-    domain = DomainModule(
-        retriever=None,  # type: ignore[arg-type]
-        question_bank=question_bank,
-        rubric_provider=StaticAsyncMessagingRubricProvider(),
-    )
-    selector = NaiveSelector(domain=domain)
+    selector = NaiveSelector(domain=domain_module)
 
     dlq_q = question_bank.next_question("dead_letter_queue", 1)
     ev = Evaluation(
