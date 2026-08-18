@@ -56,3 +56,14 @@
         trade-offs: uma falha parcial no lote exige lógica de tratamento
         granular (identificar quais itens do lote falharam) em vez de
         simplesmente falhar a mensagem inteira."
+
+- topic: lambda_retry
+  criteria:
+    - description: "Como funcionam os retries do Lambda e por que usar idempotência?"
+      weak_example: "O Lambda tenta executar a função novamente quando ocorre um erro."
+      medium_example: "Os retries recuperam falhas temporárias, mas podem fazer o mesmo
+        evento ser processado mais de uma vez."
+      strong_example: "O Lambda pode repetir um evento após uma falha, por isso o 
+        processamento deve ser idempotente para evitar efeitos duplicados. Também 
+        é necessário definir limites de tentativas, backoff e uma estratégia para 
+        falhas persistentes, como uma DLQ ou destino de falha."

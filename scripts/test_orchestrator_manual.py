@@ -1,6 +1,8 @@
 import asyncio
 
-from app import bootstrap  # noqa: F401 — garante que todos os domínios estejam registrados
+from app import (  # noqa: F401 — garante que todos os domínios estejam registrados
+    bootstrap,
+)
 from app.agents.orchestrator import InterviewNotFinishedError, OrchestratorAgent
 from app.agents.selector_naive import NaiveSelector
 from app.core.domain.registry import DomainEnum, get_domain
@@ -42,7 +44,9 @@ async def main() -> None:
         await orchestrator.get_report(state)
         print("[ERRO] get_report não lançou exceção com entrevista em andamento!\n")
     except InterviewNotFinishedError:
-        print("[OK] get_report bloqueou corretamente relatório de entrevista em andamento.\n")
+        print(
+            "[OK] get_report bloqueou corretamente relatório de entrevista em andamento.\n"
+        )
 
     for i, answer in enumerate(FIXED_ANSWERS, start=1):
         if state.finished:
@@ -87,10 +91,14 @@ async def main() -> None:
         # vale observar manualmente (ex: log/print dentro do LLMProvider,
         # se houver) que a segunda chamada não dispara requisição nova.
         report_again = await orchestrator.get_report(state)
-        assert report_again is report, "get_report não reaproveitou o cache do relatório!"
+        assert (
+            report_again is report
+        ), "get_report não reaproveitou o cache do relatório!"
         print("\n[OK] Segunda chamada a get_report reaproveitou o relatório em cache.")
     else:
-        print("\n[AVISO] Entrevista não terminou dentro do número de respostas fixas fornecidas.")
+        print(
+            "\n[AVISO] Entrevista não terminou dentro do número de respostas fixas fornecidas."
+        )
 
 
 if __name__ == "__main__":
