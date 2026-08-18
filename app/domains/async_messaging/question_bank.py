@@ -7,7 +7,7 @@ from app.core.domain.interfaces import Question, QuestionBank
 _DATA_PATH = Path(__file__).parent / "data" / "questions.yaml"
 
 
-class StaticAsyncMessagingQuestionBank(QuestionBank):
+class StaticAsyncMessagingQuestionBank:
     """Banco de perguntas estático, cobrindo SQS/SNS/Lambda."""
 
     def __init__(self, data_path: Path = _DATA_PATH) -> None:
@@ -18,6 +18,7 @@ class StaticAsyncMessagingQuestionBank(QuestionBank):
     def next_question(
         self, topic: str, difficulty: int, exclude_ids: set[str] | None = None
     ) -> Question:
+        # TODO: retornar algo diferente de [0] para aleatoriedade
         candidates = [
             q
             for q in self._questions

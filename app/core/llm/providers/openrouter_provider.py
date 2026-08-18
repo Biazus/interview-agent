@@ -21,6 +21,7 @@ class OpenRouterProvider:
         )
 
     async def generate(self, prompt: str, **params) -> LLMResponse:
+        # TODO: remover system prompt genérico e passar como parâmetro
         create_kwargs: dict = {
             "messages": [
                 {"role": "system", "content": "You are a helpful assistant."},

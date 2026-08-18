@@ -9,13 +9,13 @@ from app.core.llm.exceptions import (
     ProviderUnavailableError,
     RateLimitError,
 )
-from app.core.llm.interfaces import LLMProvider, LLMResponse
+from app.core.llm.interfaces import LLMResponse
 
 _MODEL = "openai/gpt-oss-safeguard-20b"
 _MAX_COMPLETION_TOKENS = 512
 
 
-class GroqProvider(LLMProvider):
+class GroqProvider:
     name = "groq"
 
     def __init__(self, client: AsyncGroq | None = None) -> None:
