@@ -25,13 +25,18 @@ A central **registry** wires domains at startup. The orchestrator picks a domain
 # Install dependencies
 uv sync
 
-# Start containers
-docker compose up -d
+# Start containers (Postgres dev DB + Qdrant)
+docker compose up -d postgres vector-db
 
-# Run tests
-uv run pytest tests/unit          # rápido, sem Qdrant
-uv run pytest tests/integration   # RAG (requer docker compose up -d + seed)
-uv run pytest                     # tudo
+# Apply database migrations (dev DB: interview_agent)
+uv run alembic upgrade head
+
+# Run tests (uses interview_agent_test — created by scripts/init-databases.sql)
+# Ensure Postgres is up; schema is created automatically by pytest fixtures.
+uv run pytest tests/unit tests/api          # Fase 0/1 (sem Qdrant)
+uv run pytest tests/unit                    # rápido, sem Postgres para auth unitários
+uv run pytest tests/integration             # RAG (requer docker compose up -d + seed)
+uv run pytest                               # tudo
 ```
 
 ## Project layout

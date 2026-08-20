@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 
 from app.api.dependencies import get_active_domain
-from app.core.domain.registry import DomainModule
+from app.api.errors import register_error_handlers
+from app.api.routers import auth, discovery, interviews
 from app.domains.async_messaging.bootstrap import register_async_messaging_domain
 
 
@@ -18,14 +19,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Interview Agent API", lifespan=lifespan)
+register_error_handlers(app)
+
+app.include_router(auth.router)
+app.include_router(discovery.router)
+app.include_router(interviews.router)
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
-
-
-@app.get("/topics")
-def list_topics(domain: DomainModule = Depends(get_active_domain)) -> list[str]:
-    """Rota de smoke test: prova que o domínio resolvido via DI está funcionando."""
-    return domain.question_bank.topics()

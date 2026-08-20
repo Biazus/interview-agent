@@ -1,11 +1,5 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+"""Re-export de compatibilidade; preferir `from app.core.settings import settings`."""
 
+from app.core.settings import Settings, settings
 
-class Settings(BaseSettings):
-    GROQ_API_KEY: str
-    OPENROUTER_API_KEY: str
-
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
-
-
-settings = Settings()
+__all__ = ["Settings", "settings"]

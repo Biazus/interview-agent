@@ -10,7 +10,26 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: postgresql+asyncpg://interview:interview@localhost:5432/interview_agent_test
+      GROQ_API_KEY: test
+      OPENROUTER_API_KEY: test
+
     services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: interview
+          POSTGRES_PASSWORD: interview
+          POSTGRES_DB: interview_agent_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U interview -d interview_agent_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
       qdrant:
         image: qdrant/qdrant:latest
         ports:
@@ -35,6 +54,9 @@ jobs:
 
       - name: Run unit tests
         run: uv run pytest tests/unit
+
+      - name: Run API tests
+        run: uv run pytest tests/api
 
       - name: Run integration tests
         run: uv run pytest tests/integration

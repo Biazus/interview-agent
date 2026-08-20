@@ -8,8 +8,15 @@ from app.core.domain.interfaces import (
     Rubric,
     RubricProvider,
 )
+from app.core.llm.exceptions import LLMProviderError
 from app.core.llm.interfaces import LLMProvider
 from app.core.llm.requests import GenerateRequest
+
+_LEVEL_MAP = {"FRACA": "weak", "MEDIA": "medium", "FORTE": "strong"}
+
+
+class EvaluationParseError(LLMProviderError):
+    """Resposta do LLM não segue o formato NIVEL/FEEDBACK esperado."""
 
 
 class EvaluatorAgent:
@@ -65,18 +72,18 @@ class EvaluatorAgent:
         )
 
     def _parse_response(self, text: str) -> tuple[str, str]:
-        # TODO: O evaluator faz fallback silencioso para "medium"
-        # quando o parsing falha. Isso é um problema,
-        # pois o evaluator deve levantar uma exceção ou tratar
-        # o erro de forma adequada.
-        level = "medium"
-        feedback = text.strip()
+        level: str | None = None
+        feedback: str | None = None
         for line in text.splitlines():
             if line.upper().startswith("NIVEL:"):
                 raw = line.split(":", 1)[1].strip().upper()
-                level = {"FRACA": "weak", "MEDIA": "medium", "FORTE": "strong"}.get(
-                    raw, "medium"
-                )
+                level = _LEVEL_MAP.get(raw)
             elif line.upper().startswith("FEEDBACK:"):
                 feedback = line.split(":", 1)[1].strip()
+        if level is None:
+            raise EvaluationParseError(
+                "Resposta do avaliador sem NIVEL válido (FRACA|MEDIA|FORTE)."
+            )
+        if feedback is None:
+            raise EvaluationParseError("Resposta do avaliador sem FEEDBACK.")
         return level, feedback
