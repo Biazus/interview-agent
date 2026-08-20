@@ -22,11 +22,11 @@ A central **registry** wires domains at startup. The orchestrator picks a domain
 | API | FastAPI, Uvicorn |
 | Database | PostgreSQL 16, SQLAlchemy async + asyncpg, Alembic |
 | Auth | Argon2 passwords, opaque Bearer tokens (SHA-256 in DB) |
-| Vectors | Qdrant, sentence-transformers |
+| Vectors | Qdrant, fastembed (ONNX) |
 | LLM | Groq → OpenRouter fallback chain |
 | CI | GitHub Actions (Postgres + Qdrant service containers) |
 
-> **Docker image size:** `sentence-transformers` pulls in PyTorch (~500 MB+ on Linux), increasing image size, cold start, and memory (~400 MB+ RAM typical). See [docs/todo.md](docs/todo.md) for follow-up options (e.g. fastembed, hosted embeddings).
+> **Embeddings runtime:** Production uses **fastembed** (ONNX) instead of PyTorch/sentence-transformers. On Debian slim Docker images you may need `libgomp1` (`apt-get install -y libgomp1`) for ONNX Runtime; see [docs/current_plan.md](docs/current_plan.md) PR3 for Dockerfile changes.
 
 ## Quick start (Docker)
 
