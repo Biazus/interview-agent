@@ -11,11 +11,14 @@ from app.api.main import app
 
 @pytest.fixture(autouse=True)
 def _clear_domain_cache():
-    from app.api.dependencies import get_active_domain
+    from app.api.dependencies import get_llm_chain
+    from app.core.domain.registry import get_cached_domain
 
-    get_active_domain.cache_clear()
+    get_cached_domain.cache_clear()
+    get_llm_chain.cache_clear()
     yield
-    get_active_domain.cache_clear()
+    get_cached_domain.cache_clear()
+    get_llm_chain.cache_clear()
 
 
 @pytest.fixture
