@@ -50,7 +50,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Seed Qdrant
-        run: uv run python -c "from app.domains.async_messaging.rag_ingestion import ingest_seed_documents; ingest_seed_documents()"
+        run: uv run python scripts/run_seed.py
 
       - name: Smoke import fastembed embedder
         run: uv run python -c "from fastembed import TextEmbedding; from app.core.rag.embeddings import EmbeddingProvider"

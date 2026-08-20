@@ -42,7 +42,7 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 
 ---
 
-## Current state (v0.1.0)
+## Current state (v0.1.0 → v0.2 in progress)
 
 ### What exists
 
@@ -52,8 +52,11 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 | Domains | 1 (`async_messaging`): 5 topics, 35 questions, 12 RAG documents |
 | Agents | Orchestrator + Evaluator (text parse) + Reporting (structured output) |
 | UX | OpenAPI / curl only — **no frontend** |
-| Deploy | Docker Compose; image ~8.5 GB; cold start ~1 min |
-| Tests | Unit + API + integration in CI |
+| Embeddings | **fastembed** (ONNX) in-process — PR1 ✅ |
+| RAG seed | Decoupled job (`run_seed.py` + compose profile `seed`); manifest hash — PR2 ✅ |
+| RAG readiness | **`503 RAG_NOT_READY`** on `start_interview` when empty/stale — PR2 ✅ |
+| Deploy | Docker Compose; image still ~8.5 GB (slim build PR3); cold start faster on restart after seed skip |
+| Tests | Unit + API + integration in CI — **128 passed** (14 PR2 tests) |
 
 ### Validated vs assumed
 
@@ -123,26 +126,28 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 
 ---
 
-### v0.2 — Reliable enough to demo
+### v0.2 — Reliable enough to demo *(in progress — PR2 done, PR3/PR4 pending)*
 
 **Theme:** remove friction and failure modes before investing heavily in UI and content.
 
-| Deliverable | Product outcome |
-|-------------|-----------------|
-| Lean Docker image (CPU-only torch, multi-stage) | Hostable without 8 GB pulls |
-| Conditional Qdrant seed + readiness checks | Predictable startup |
-| Structured output in Evaluator | Fewer abandoned sessions |
-| `max_length` on answers/passwords | Safe to expose |
-| Question randomization | Practice feels less scripted |
-| CORS (prep for React) | Frontend can call API from browser |
+| Deliverable | Product outcome | Status |
+|-------------|-----------------|--------|
+| fastembed production swap (remove torch) | Smaller deps; comparable retrieval | ✅ PR1 |
+| Decoupled Qdrant seed + manifest | Predictable startup; skip re-embed on restart | ✅ PR2 |
+| `RAG_NOT_READY` fail-fast on start | No silent empty-RAG sessions | ✅ PR2 |
+| Lean Docker image (multi-stage, `.dockerignore`) | Hostable without 8 GB pulls | PR3 |
+| Structured output in Evaluator | Fewer abandoned sessions | Open |
+| `max_length` on answers/passwords | Safe to expose | Open |
+| Question randomization | Practice feels less scripted | Open |
+| CORS (prep for React) | Frontend can call API from browser | Open |
 
 **North star:** *"I can host this and complete 10 interviews in a row without a 503."*
 
 **Suggested metrics**
 
 - 10 consecutive interviews without LLM failure  
-- Cold start under 30s  
-- Image under ~2 GB  
+- Cold start under 30s *(improves on API restart after PR2 seed skip; full image slim PR3)*  
+- Image under ~2 GB *(hard 650 MB CI gate PR4)*  
 
 ---
 
@@ -269,7 +274,7 @@ Ordered by how much they block a candidate today:
 
 1. **No frontend** — primary blocker for v0.3  
 2. **Evaluator reliability** — parse failures abort sessions  
-3. **Deploy friction** — large image and slow cold start discourage sharing  
+3. **Deploy friction** — image still large until PR3; cold start improved on restart (PR2 seed skip) but first boot needs seed job  
 4. **Question repetition** — deterministic first question per topic  
 5. **Finite content** — 35 questions; power users exhaust variety quickly  
 6. **No public hardening** — rate limits needed when React ships  

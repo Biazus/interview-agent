@@ -23,6 +23,25 @@ class VectorStore:
                 vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
             )
 
+    def get_collection_info(self, collection_name: str) -> tuple[int, dict]:
+        if not self._client.collection_exists(collection_name):
+            return (0, {})
+        info = self._client.get_collection(collection_name)
+        points_count = info.points_count or 0
+        metadata = info.config.metadata if info.config else None
+        if metadata is None:
+            return (points_count, {})
+        return (points_count, dict(metadata))
+
+    def set_collection_metadata(self, collection_name: str, metadata: dict) -> None:
+        self._client.update_collection(
+            collection_name=collection_name,
+            metadata=metadata,
+        )
+
+    def drop_collection(self, collection_name: str) -> None:
+        self._client.delete_collection(collection_name=collection_name)
+
     def upsert(
         self,
         collection_name: str,

@@ -42,6 +42,20 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  seed:
+    build: .
+    profiles: ["seed"]
+    depends_on:
+      vector-db:
+        condition: service_started
+    environment:
+      QDRANT_HOST: vector-db
+      QDRANT_PORT: 6333
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    command: uv run python scripts/run_seed.py
+
   localstack:
     image: localstack/localstack:latest
     profiles: ["messaging"]
