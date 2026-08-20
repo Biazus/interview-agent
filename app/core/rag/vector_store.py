@@ -8,7 +8,7 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-_VECTOR_SIZE = 384  # dimensão de saída do all-MiniLM-L6-v2
+from app.core.rag.embedding_config import VECTOR_SIZE
 
 
 class VectorStore:
@@ -20,9 +20,7 @@ class VectorStore:
         if collection_name not in existing:
             self._client.create_collection(
                 collection_name=collection_name,
-                vectors_config=VectorParams(
-                    size=_VECTOR_SIZE, distance=Distance.COSINE
-                ),
+                vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
             )
 
     def upsert(

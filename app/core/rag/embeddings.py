@@ -1,6 +1,8 @@
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 
-_MODEL_NAME = "all-MiniLM-L6-v2"
+from app.core.rag.embedding_config import EMBEDDING_MODEL_ID
+
+# MiniLM parity target: sentence-transformers/all-MiniLM-L6-v2
 
 
 class EmbeddingProvider:
@@ -14,10 +16,14 @@ class EmbeddingProvider:
     """
 
     def __init__(self) -> None:
-        self._model = SentenceTransformer(_MODEL_NAME)
+        self._model = TextEmbedding(model_name=EMBEDDING_MODEL_ID)
 
     def embed(self, text: str) -> list[float]:
-        return self._model.encode(text).tolist()
+        vector = next(self._model.embed([text]))
+        return [float(value) for value in vector.tolist()]
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        return self._model.encode(texts).tolist()
+        return [
+            [float(value) for value in vector.tolist()]
+            for vector in self._model.embed(texts)
+        ]
