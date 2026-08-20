@@ -11,6 +11,10 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "alembic>=1.14",
+    "argon2-cffi>=23.1",
+    "asyncpg>=0.30",
+    "email-validator>=2.0",
     "fastapi>=0.141.1",
     "groq>=1.6.0",
     "openai>=3.0.0",
@@ -20,6 +24,7 @@ dependencies = [
     "pyyaml>=6.0.3",
     "qdrant-client>=1.19.0",
     "sentence-transformers>=5.7.0",
+    "sqlalchemy[asyncio]>=2.0",
     "uvicorn>=0.52.3",
 ]
 
@@ -28,6 +33,7 @@ interview-agent = "interview_agent:main"
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28",
     "pre-commit>=4.6.2",
     "pytest-asyncio>=1.4.0",
     "ruff==0.6.1",
@@ -41,5 +47,5 @@ line-length = 88
 asyncio_mode = "auto"
 pythonpath = ["."]
 markers = [
-    "integration: requer Qdrant e carrega SentenceTransformer",
+    "integration: requer Qdrant, Postgres ou carrega SentenceTransformer",
 ]

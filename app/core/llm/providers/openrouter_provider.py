@@ -10,7 +10,7 @@ from openai import (
 )
 from openai import RateLimitError as OpenAIRateLimitError
 
-from app.core.llm.config import settings
+from app.core.settings import settings
 from app.core.llm.providers.chat_completions_adapter import (
     ChatCompletionsAdapter,
     SdkErrorTypes,

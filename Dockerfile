@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
@@ -7,4 +7,8 @@ RUN pip install uv && uv sync --frozen --no-dev
 
 COPY . .
 
-CMD ["uv", "run", "uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN chmod +x scripts/docker-entrypoint.sh
+
+EXPOSE 8000
+
+ENTRYPOINT ["scripts/docker-entrypoint.sh"]

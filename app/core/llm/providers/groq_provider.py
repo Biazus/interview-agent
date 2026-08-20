@@ -10,7 +10,7 @@ from groq import (
 )
 from groq import RateLimitError as GroqRateLimitError
 
-from app.core.llm.config import settings
+from app.core.settings import settings
 from app.core.llm.providers.chat_completions_adapter import (
     ChatCompletionsAdapter,
     SdkErrorTypes,
