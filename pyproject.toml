@@ -33,6 +33,7 @@ interview-agent = "interview_agent:main"
 
 [dependency-groups]
 dev = [
+    "fastembed>=0.6.0",
     "httpx>=0.28",
     "pre-commit>=4.6.2",
     "pytest-asyncio>=1.4.0",

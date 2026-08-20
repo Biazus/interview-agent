@@ -1,0 +1,59 @@
+version: 1
+domain: async_messaging
+collection: async_messaging
+queries:
+  - id: gq_dlq_poison
+    query: >
+      O que é uma Dead Letter Queue no SQS e como ela evita que mensagens
+      envenenadas fiquem sendo reprocessadas indefinidamente?
+    topic: dead_letter_queue
+    expected_top1_source: doc_dlq_01
+
+  - id: gq_dlq_max_receive
+    query: >
+      Como funciona o maxReceiveCount na Redrive Policy e o que acontece
+      quando uma mensagem ultrapassa esse limite de tentativas?
+    topic: dead_letter_queue
+    expected_top1_source: doc_dlq_05
+
+  - id: gq_visibility_basics
+    query: >
+      O que é visibility timeout no SQS e por que uma mensagem recebida
+      fica invisível para outros consumidores?
+    topic: visibility_timeout
+    expected_top1_source: doc_visibility_02
+
+  - id: gq_visibility_extend
+    query: >
+      Como evitar processamento duplicado quando o processamento demora mais
+      que o visibility timeout, usando ChangeMessageVisibility?
+    topic: visibility_timeout
+    expected_top1_source: doc_visibility_02
+
+  - id: gq_fanout_sns
+    query: >
+      Como implementar fan-out com SNS publicando em múltiplas filas SQS
+      para que vários sistemas consumam o mesmo evento?
+    topic: fan_out
+    expected_top1_source: doc_fanout_01
+
+  - id: gq_fanout_isolation
+    query: >
+      Em arquitetura fan-out, por que falha em uma fila SQS não afeta
+      as demais filas inscritas no mesmo tópico?
+    topic: fan_out
+    expected_top1_source: doc_fanout_02
+
+  - id: gq_batch_receive
+    query: >
+      Como reduzir chamadas de API no SQS recebendo até 10 mensagens por
+      vez com MaxNumberOfMessages?
+    topic: batch_processing
+    expected_top1_source: doc_batch_01
+
+  - id: gq_batch_lambda_partial
+    query: >
+      Como evitar reentrega de todo o lote quando uma Lambda processa
+      mensagens SQS em batch e apenas algumas falham?
+    topic: batch_processing
+    expected_top1_source: doc_batch_02
