@@ -1,3 +1,5 @@
+import logging
+
 from app.agents.evaluator import EvaluatorAgent
 from app.agents.reporting import ReportingAgent
 from app.core.domain.interfaces import (
@@ -8,6 +10,8 @@ from app.core.domain.interfaces import (
 )
 from app.core.domain.registry import DomainModule
 from app.core.llm.interfaces import LLMProvider
+
+logger = logging.getLogger(__name__)
 
 _MAX_QUESTIONS = 10
 _MAX_DIFFICULTY = 5
@@ -85,13 +89,20 @@ class OrchestratorAgent:
         state.history.append((state.current_question, evaluation))
 
         if len(state.history) >= _MAX_QUESTIONS:
-            print("Atingiu o número máximo de perguntas. Encerrando a entrevista.")
+            logger.info(
+                "Interview finished: max questions reached",
+                extra={"reason": "max_questions_reached"},
+            )
             state.finished = True
             return state
 
         try:
             decision = self._selector.decide(state, evaluation)
         except ValueError:
+            logger.info(
+                "Interview finished: selector exhausted",
+                extra={"reason": "selector_exhausted"},
+            )
             state.finished = True
             return state
 
@@ -105,8 +116,9 @@ class OrchestratorAgent:
             exclude_topics=exclude_topics,
         )
         if question is None:
-            print(
-                "Não foi possível encontrar uma próxima pergunta. Encerrando a entrevista."
+            logger.info(
+                "Interview finished: no next question available",
+                extra={"reason": "no_next_question"},
             )
             state.finished = True
             return state

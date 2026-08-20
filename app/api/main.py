@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -9,18 +10,31 @@ from app.core.domain.registry import (
     DomainNotRegisteredError,
     get_cached_domain,
 )
+from app.core.logging import configure_logging
+from app.core.settings import settings
 from app.domains.async_messaging.bootstrap import register_async_messaging_domain
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    configure_logging(settings.LOG_LEVEL)
+
     # Startup: registra todos os domínios disponíveis
     register_async_messaging_domain()
     for domain in DomainEnum:
         try:
             get_cached_domain(domain)
+            logger.info(
+                "Domain registered at startup",
+                extra={"domain": domain.value},
+            )
         except DomainNotRegisteredError:
-            pass
+            logger.warning(
+                "Domain not registered at startup",
+                extra={"domain": domain.value},
+            )
     yield
     # Shutdown: nada a limpar por enquanto
 

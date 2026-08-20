@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from functools import partial
 
 from app.core.domain.interfaces import (
@@ -11,6 +12,8 @@ from app.core.domain.interfaces import (
 from app.core.llm.exceptions import LLMProviderError
 from app.core.llm.interfaces import LLMProvider
 from app.core.llm.requests import GenerateRequest
+
+logger = logging.getLogger(__name__)
 
 _LEVEL_MAP = {"FRACA": "weak", "MEDIA": "medium", "FORTE": "strong"}
 
@@ -41,7 +44,7 @@ class EvaluatorAgent:
 
         prompt = self._build_prompt(question, answer, rubric, chunks)
         response = await self._llm.generate(GenerateRequest.simple(prompt))
-        level, feedback = self._parse_response(response.text)
+        level, feedback = self._parse_response(response.text, topic=topic)
 
         return Evaluation(
             topic=topic, level=level, feedback=feedback, raw_response=response
@@ -71,7 +74,19 @@ class EvaluatorAgent:
             "FEEDBACK: <justificativa em até 3 frases>"
         )
 
-    def _parse_response(self, text: str) -> tuple[str, str]:
+    def _log_parse_failure(
+        self, topic: str, has_level: bool, has_feedback: bool
+    ) -> None:
+        logger.warning(
+            "Evaluation response parse failed",
+            extra={
+                "topic": topic,
+                "has_level": has_level,
+                "has_feedback": has_feedback,
+            },
+        )
+
+    def _parse_response(self, text: str, *, topic: str) -> tuple[str, str]:
         level: str | None = None
         feedback: str | None = None
         for line in text.splitlines():
@@ -80,10 +95,16 @@ class EvaluatorAgent:
                 level = _LEVEL_MAP.get(raw)
             elif line.upper().startswith("FEEDBACK:"):
                 feedback = line.split(":", 1)[1].strip()
+
+        has_level = level is not None
+        has_feedback = feedback is not None
+
         if level is None:
+            self._log_parse_failure(topic, has_level, has_feedback)
             raise EvaluationParseError(
                 "Resposta do avaliador sem NIVEL válido (FRACA|MEDIA|FORTE)."
             )
         if feedback is None:
+            self._log_parse_failure(topic, has_level, has_feedback)
             raise EvaluationParseError("Resposta do avaliador sem FEEDBACK.")
         return level, feedback

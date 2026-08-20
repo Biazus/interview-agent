@@ -3,6 +3,7 @@ from functools import lru_cache
 from app.core.rag.embeddings import EmbeddingProvider
 from app.core.rag.qdrant_retriever import QdrantRetriever
 from app.core.rag.vector_store import VectorStore
+from app.core.settings import settings
 
 
 @lru_cache
@@ -12,7 +13,7 @@ def get_embedding_provider() -> EmbeddingProvider:
 
 @lru_cache
 def get_vector_store() -> VectorStore:
-    return VectorStore()
+    return VectorStore(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
 
 
 @lru_cache

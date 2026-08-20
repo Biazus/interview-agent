@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 from functools import lru_cache
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -20,6 +21,8 @@ from app.repositories.interview_repository import InterviewRepository
 from app.services.auth_service import AuthService
 from app.services.discovery_service import DiscoveryService
 from app.services.interview_service import InterviewService
+
+logger = logging.getLogger(__name__)
 
 
 def get_active_domain() -> DomainModule:
@@ -97,7 +100,17 @@ def _parse_bearer_token(authorization: str | None) -> str:
         raise MissingToken()
 
     scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or not token:
+    if scheme.lower() != "bearer":
+        logger.warning(
+            "Invalid authentication token",
+            extra={"reason": "invalid_auth_scheme"},
+        )
+        raise InvalidToken()
+    if not token:
+        logger.warning(
+            "Invalid authentication token",
+            extra={"reason": "missing_bearer_token"},
+        )
         raise InvalidToken()
 
     return token
@@ -110,6 +123,10 @@ async def get_current_candidate_id(
     token = _parse_bearer_token(authorization)
     candidate_id = await validator.validate(token)
     if candidate_id is None:
+        logger.warning(
+            "Invalid authentication token",
+            extra={"reason": "invalid_or_expired_token"},
+        )
         raise InvalidToken()
 
     return candidate_id

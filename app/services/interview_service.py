@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 from uuid import UUID
 
@@ -25,6 +26,7 @@ from app.core.exceptions import (
     NoActiveInterview,
 )
 from app.core.llm.exceptions import LLMProviderError
+from app.core.logging import error_type, interview_extra
 from app.repositories.interview_mapper import (
     report_from_row,
     to_interview_response,
@@ -32,6 +34,8 @@ from app.repositories.interview_mapper import (
     to_state,
 )
 from app.repositories.interview_repository import InterviewRepository
+
+logger = logging.getLogger(__name__)
 
 _ACTIVE_INTERVIEW_CONSTRAINT = "uq_interviews_candidate_active"
 _DUPLICATE_TURN_CONSTRAINT = "uq_interview_turn_number"
@@ -67,6 +71,13 @@ class InterviewService:
     ) -> dict:
         active = await self._repository.get_active_by_candidate(candidate_id)
         if active is not None:
+            logger.warning(
+                "Cannot start interview: candidate already has active interview",
+                extra={
+                    "candidate_id": str(candidate_id),
+                    "reason": "active_interview_exists",
+                },
+            )
             raise ActiveInterviewExists()
 
         domain_enum = self._parse_domain(domain)
@@ -93,7 +104,22 @@ class InterviewService:
         except IntegrityError as exc:
             await self._session.rollback()
             if _integrity_constraint_name(exc) == _ACTIVE_INTERVIEW_CONSTRAINT:
+                logger.warning(
+                    "Cannot start interview: active interview race detected",
+                    extra={
+                        "candidate_id": str(candidate_id),
+                        "reason": "active_interview_exists",
+                    },
+                )
                 raise ActiveInterviewExists() from exc
+            logger.error(
+                "Unexpected integrity error while creating interview",
+                extra={
+                    "candidate_id": str(candidate_id),
+                    "error_type": error_type(exc),
+                },
+                exc_info=True,
+            )
             raise
 
         interview = await self._repository.get_by_id_for_candidate(
@@ -103,6 +129,16 @@ class InterviewService:
             raise InterviewNotFound()
 
         rehydrated_state = to_state(interview, [])
+        logger.info(
+            "Interview started",
+            extra={
+                "interview_id": str(interview_id),
+                "candidate_id": str(candidate_id),
+                "domain": domain_enum.value,
+                "topic": state.topic,
+                "difficulty": state.difficulty,
+            },
+        )
         return to_interview_response(interview, rehydrated_state)
 
     async def get_active_interview(self, candidate_id: UUID) -> dict:
@@ -139,13 +175,29 @@ class InterviewService:
         try:
             new_state = await orchestrator.submit_answer(state, answer)
         except (LLMProviderError, EvaluationParseError) as exc:
+            logger.error(
+                "LLM unavailable during answer submission",
+                extra=interview_extra(
+                    interview_id,
+                    candidate_id,
+                    error_type=error_type(exc),
+                ),
+            )
             raise LLMUnavailable() from exc
 
         report_to_persist: CandidateReport | None = None
         if new_state.finished:
             try:
                 report_to_persist = await orchestrator.get_report(new_state)
-            except LLMProviderError:
+            except LLMProviderError as exc:
+                logger.error(
+                    "Failed to generate report on final turn; interview finishes without report",
+                    extra=interview_extra(
+                        interview_id,
+                        candidate_id,
+                        error_type=error_type(exc),
+                    ),
+                )
                 report_to_persist = None
 
         answered_question, evaluation = new_state.history[-1]
@@ -161,6 +213,14 @@ class InterviewService:
         except IntegrityError as exc:
             await self._session.rollback()
             if _integrity_constraint_name(exc) == _DUPLICATE_TURN_CONSTRAINT:
+                logger.warning(
+                    "Duplicate turn submission detected",
+                    extra=interview_extra(
+                        interview_id,
+                        candidate_id,
+                        reason="duplicate_turn",
+                    ),
+                )
                 raise DuplicateTurn() from exc
             raise
 
@@ -169,13 +229,32 @@ class InterviewService:
                 async with self._session.begin_nested():
                     await self._repository.save_report(interview_id, report_to_persist)
             except IntegrityError:
-                pass
+                logger.warning(
+                    "Report already saved during concurrent submission",
+                    extra=interview_extra(
+                        interview_id,
+                        candidate_id,
+                        reason="report_integrity_race",
+                    ),
+                )
 
         updated = await self._repository.get_by_id_for_candidate(
             interview_id, candidate_id
         )
         if updated is None:
             raise InterviewNotFound()
+
+        logger.info(
+            "Answer turn saved",
+            extra=interview_extra(
+                interview_id,
+                candidate_id,
+                turn_number=len(new_state.history),
+                finished=new_state.finished,
+                evaluation_level=evaluation.level,
+                topic=evaluation.topic,
+            ),
+        )
 
         return to_interview_response(updated, new_state)
 
@@ -191,6 +270,10 @@ class InterviewService:
 
         existing = await self._repository.get_report(interview_id)
         if existing is not None:
+            logger.info(
+                "Report cache hit",
+                extra=interview_extra(interview_id, candidate_id),
+            )
             report = report_from_row(existing)
             return to_report_response(interview_id, report)
 
@@ -201,6 +284,14 @@ class InterviewService:
         try:
             report = await orchestrator.get_report(state)
         except LLMProviderError as exc:
+            logger.error(
+                "Failed to generate report",
+                extra=interview_extra(
+                    interview_id,
+                    candidate_id,
+                    error_type=error_type(exc),
+                ),
+            )
             raise LLMUnavailable() from exc
 
         try:
@@ -209,10 +300,22 @@ class InterviewService:
             await self._session.rollback()
             existing = await self._repository.get_report(interview_id)
             if existing is not None:
+                logger.warning(
+                    "Report save race recovered from existing report",
+                    extra=interview_extra(
+                        interview_id,
+                        candidate_id,
+                        reason="report_integrity_race",
+                    ),
+                )
                 report = report_from_row(existing)
                 return to_report_response(interview_id, report)
             raise
 
+        logger.info(
+            "Report generated successfully",
+            extra=interview_extra(interview_id, candidate_id),
+        )
         return to_report_response(interview_id, report)
 
     def _parse_domain(self, domain: str) -> DomainEnum:

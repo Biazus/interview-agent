@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+import logging
 
 from sqlalchemy.exc import IntegrityError
 
@@ -9,6 +10,8 @@ from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
 from app.core.settings import settings
 from app.repositories.auth_token_repository import AuthTokenRepository
 from app.repositories.candidate_repository import CandidateRepository
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_email(email: str) -> str:
@@ -29,18 +32,32 @@ class AuthService:
         password_hash = hash_password(password)
 
         try:
-            return await self._candidate_repository.create(
+            candidate = await self._candidate_repository.create(
                 normalized_email, password_hash
             )
         except IntegrityError as exc:
             await self._candidate_repository.rollback()
+            logger.warning(
+                "Registration failed: email already registered",
+                extra={"reason": "duplicate_email"},
+            )
             raise EmailAlreadyRegistered() from exc
+
+        logger.info(
+            "Candidate registered successfully",
+            extra={"candidate_id": str(candidate.id)},
+        )
+        return candidate
 
     async def login(self, email: str, password: str) -> tuple[str, int]:
         normalized_email = _normalize_email(email)
         candidate = await self._candidate_repository.find_by_email(normalized_email)
 
         if candidate is None or not verify_password(password, candidate.password_hash):
+            logger.warning(
+                "Login failed",
+                extra={"reason": "invalid_credentials"},
+            )
             raise InvalidCredentials()
 
         raw_token, token_hash = generate_token()

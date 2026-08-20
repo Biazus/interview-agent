@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import TypeVar
 
 from pydantic import BaseModel, ValidationError
@@ -7,9 +8,29 @@ from app.core.llm.exceptions import StructuredOutputError
 from app.core.llm.interfaces import LLMProvider
 from app.core.llm.requests import DEFAULT_MAX_OUTPUT_TOKENS, GenerateRequest
 
+logger = logging.getLogger(__name__)
+
 T = TypeVar("T", bound=BaseModel)
 
 _JSON_OBJECT_FORMAT = {"type": "json_object"}
+
+_MAX_ERROR_DETAIL = 200
+
+
+def _truncate_error(message: str) -> str:
+    if len(message) <= _MAX_ERROR_DETAIL:
+        return message
+    return message[: _MAX_ERROR_DETAIL - 3] + "..."
+
+
+def _log_structured_failure(schema: str, error_msg: str) -> None:
+    logger.warning(
+        "Structured output validation failed",
+        extra={
+            "schema": schema,
+            "error": _truncate_error(error_msg),
+        },
+    )
 
 
 async def generate_structured(
@@ -40,13 +61,19 @@ async def generate_structured(
 
     raw = (response.text or "").strip()
     if not raw:
-        raise StructuredOutputError("LLM retornou resposta vazia.")
+        error = StructuredOutputError("LLM retornou resposta vazia.")
+        _log_structured_failure(output_model.__name__, str(error))
+        raise error
 
     try:
         return output_model.model_validate_json(raw)
     except ValidationError as exc:
-        raise StructuredOutputError(
+        error = StructuredOutputError(
             f"JSON não conforma ao schema {output_model.__name__}: {exc}"
-        ) from exc
+        )
+        _log_structured_failure(output_model.__name__, str(exc))
+        raise error from exc
     except json.JSONDecodeError as exc:
-        raise StructuredOutputError(f"Resposta não é JSON válido: {exc}") from exc
+        error = StructuredOutputError(f"Resposta não é JSON válido: {exc}")
+        _log_structured_failure(output_model.__name__, str(exc))
+        raise error from exc
