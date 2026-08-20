@@ -2,10 +2,10 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
 
-from app.api.errors import APIError
 from app.core.auth.password import hash_password, verify_password
 from app.core.auth.token import generate_token
 from app.core.db.models import Candidate
+from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
 from app.core.settings import settings
 from app.repositories.auth_token_repository import AuthTokenRepository
 from app.repositories.candidate_repository import CandidateRepository
@@ -34,22 +34,14 @@ class AuthService:
             )
         except IntegrityError as exc:
             await self._candidate_repository.rollback()
-            raise APIError(
-                status_code=409,
-                detail="E-mail já cadastrado.",
-                code="EMAIL_ALREADY_REGISTERED",
-            ) from exc
+            raise EmailAlreadyRegistered() from exc
 
     async def login(self, email: str, password: str) -> tuple[str, int]:
         normalized_email = _normalize_email(email)
         candidate = await self._candidate_repository.find_by_email(normalized_email)
 
         if candidate is None or not verify_password(password, candidate.password_hash):
-            raise APIError(
-                status_code=401,
-                detail="Credenciais inválidas.",
-                code="INVALID_CREDENTIALS",
-            )
+            raise InvalidCredentials()
 
         raw_token, token_hash = generate_token()
         expires_at = datetime.now(UTC) + timedelta(

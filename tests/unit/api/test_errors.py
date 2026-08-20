@@ -5,6 +5,7 @@ from httpx import ASGITransport, AsyncClient
 pytest.importorskip("app.api.errors", reason="Fase 1 pendente: app.api.errors")
 
 from app.api.errors import APIError, register_error_handlers  # noqa: E402
+from app.core.exceptions import InvalidDomain  # noqa: E402
 
 
 def test_api_error_exposes_status_detail_and_code():
@@ -35,6 +36,26 @@ async def test_api_error_handler_returns_json_with_detail_and_code():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/boom")
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": "Domínio inválido.",
+        "code": "INVALID_DOMAIN",
+    }
+
+
+@pytest.mark.asyncio
+async def test_app_error_handler_maps_domain_exceptions():
+    app = FastAPI()
+    register_error_handlers(app)
+
+    @app.get("/invalid-domain")
+    def invalid_domain():
+        raise InvalidDomain()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/invalid-domain")
 
     assert response.status_code == 400
     assert response.json() == {
