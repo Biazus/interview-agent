@@ -6,17 +6,22 @@ from uuid import UUID
 from fastapi import Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.orchestrator import OrchestratorAgent
+from app.agents.selector_naive import NaiveSelector
 from app.api.errors import APIError
 from app.core.auth.db_token_validator import DbTokenValidator
 from app.core.db.session import async_session_factory
-from app.core.domain.registry import DomainEnum, DomainModule, get_domain
+from app.core.domain.registry import DomainEnum, DomainModule, get_cached_domain
+from app.core.llm.bootstrap import build_default_llm_chain
+from app.core.llm.fallback import FallbackLLMProvider
 from app.repositories.auth_token_repository import AuthTokenRepository
 from app.repositories.candidate_repository import CandidateRepository
+from app.repositories.interview_repository import InterviewRepository
 from app.services.auth_service import AuthService
 from app.services.discovery_service import DiscoveryService
+from app.services.interview_service import InterviewService
 
 
-@lru_cache
 def get_active_domain() -> DomainModule:
     """
     Resolve o domínio ativo da entrevista.
@@ -25,7 +30,21 @@ def get_active_domain() -> DomainModule:
     ativos simultaneamente (ex: escolha por sessão de usuário), este ponto
     muda para ler de configuração/request em vez de constante.
     """
-    return get_domain(DomainEnum.ASYNC_MESSAGING)
+    return get_cached_domain(DomainEnum.ASYNC_MESSAGING)
+
+
+@lru_cache
+def get_llm_chain() -> FallbackLLMProvider:
+    return build_default_llm_chain()
+
+
+def get_orchestrator(domain: DomainEnum) -> OrchestratorAgent:
+    module = get_cached_domain(domain)
+    return OrchestratorAgent(
+        domain=module,
+        llm=get_llm_chain(),
+        selector=NaiveSelector(module),
+    )
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -58,6 +77,14 @@ def get_auth_service(session: DbSession) -> AuthService:
     return AuthService(
         candidate_repository=_candidate_repository(session),
         auth_token_repository=_auth_token_repository(session),
+    )
+
+
+def get_interview_service(session: DbSession) -> InterviewService:
+    return InterviewService(
+        repository=InterviewRepository(session),
+        session=session,
+        orchestrator_factory=get_orchestrator,
     )
 
 

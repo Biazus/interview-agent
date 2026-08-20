@@ -1,39 +1,27 @@
-import os
-from uuid import uuid4
-
 import pytest
 
-pytest.importorskip(
-    "app.repositories.interview_repository",
-    reason="Fase 3 pendente: app.repositories.interview_repository",
-)
+from sqlalchemy.exc import IntegrityError
 
-from sqlalchemy.exc import IntegrityError  # noqa: E402
-
-from app.repositories.interview_repository import InterviewRepository  # noqa: E402
-
-
-def _postgres_available() -> bool:
-    url = os.environ.get("DATABASE_URL", "")
-    return url.startswith("postgresql")
+from app.repositories.interview_repository import InterviewRepository
 
 
 @pytest.fixture
-async def repository():
-    from app.core.db.session import async_session_factory
+async def repository(interview_repository_with_candidate) -> InterviewRepository:
+    repository, _ = interview_repository_with_candidate
+    return repository
 
-    async with async_session_factory() as session:
-        yield InterviewRepository(session)
+
+@pytest.fixture
+def candidate_id(interview_repository_with_candidate):
+    _, candidate_id = interview_repository_with_candidate
+    return candidate_id
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_second_active_interview_raises_integrity_error(repository):
-    if not _postgres_available():
-        pytest.skip("DATABASE_URL Postgres não configurada")
-
-    candidate_id = uuid4()
-
+async def test_second_active_interview_raises_integrity_error(
+    repository, candidate_id, require_postgres
+):
     await repository.create_interview(
         candidate_id=candidate_id,
         domain="async_messaging",
@@ -60,11 +48,9 @@ async def test_second_active_interview_raises_integrity_error(repository):
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_duplicate_turn_number_raises_integrity_error(repository):
-    if not _postgres_available():
-        pytest.skip("DATABASE_URL Postgres não configurada")
-
-    candidate_id = uuid4()
+async def test_duplicate_turn_number_raises_integrity_error(
+    repository, candidate_id, require_postgres
+):
     interview_id = await repository.create_interview(
         candidate_id=candidate_id,
         domain="async_messaging",

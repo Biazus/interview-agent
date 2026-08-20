@@ -1,5 +1,3 @@
-import pytest
-
 from app.agents.reporting_schema import ReportLLMOutput
 
 
@@ -19,13 +17,17 @@ def test_report_llm_output_maps_to_candidate_report():
     assert report.total_questions == 5
 
 
-def test_report_llm_output_rejects_empty_lists():
-    with pytest.raises(Exception):
-        ReportLLMOutput.model_validate(
-            {
-                "resumo": "Ok",
-                "pontos_fortes": [],
-                "pontos_fracos": ["x"],
-                "sugestoes": ["y"],
-            }
-        )
+def test_report_llm_output_normalizes_empty_lists():
+    output = ReportLLMOutput.model_validate(
+        {
+            "resumo": "Ok",
+            "pontos_fortes": [],
+            "pontos_fracos": ["x"],
+            "sugestoes": ["y"],
+        }
+    )
+
+    assert len(output.pontos_fortes) == 1
+    assert "Nenhum ponto forte" in output.pontos_fortes[0]
+    assert output.pontos_fracos == ["x"]
+    assert output.sugestoes == ["y"]

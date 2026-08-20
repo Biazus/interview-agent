@@ -15,9 +15,9 @@ Responda SOMENTE com um objeto JSON válido, sem markdown nem texto fora do JSON
 Use exatamente estas chaves em português:
 
 - "resumo": string com até 2 frases curtas sobre o desempenho geral
-- "pontos_fortes": array de strings (até 3 itens curtos)
-- "pontos_fracos": array de strings (até 3 itens curtos)
-- "sugestoes": array de strings (até 3 itens curtos)
+- "pontos_fortes": array com pelo menos 1 string curta (até 3 itens)
+- "pontos_fracos": array com pelo menos 1 string curta (até 3 itens)
+- "sugestoes": array com pelo menos 1 string curta (até 3 itens)
 """
 
 

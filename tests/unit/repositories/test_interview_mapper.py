@@ -2,16 +2,10 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
-import pytest
 
-pytest.importorskip(
-    "app.repositories.interview_mapper",
-    reason="Fase 3 pendente: app.repositories.interview_mapper",
-)
-
-from app.core.domain.interfaces import Evaluation, Question  # noqa: E402
-from app.core.llm.interfaces import LLMResponse  # noqa: E402
-from app.repositories import interview_mapper  # noqa: E402
+from app.core.domain.interfaces import Evaluation, Question
+from app.core.llm.interfaces import LLMResponse
+from app.repositories import interview_mapper
 
 
 def _question(

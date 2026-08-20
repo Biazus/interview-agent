@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 
 from app.core.domain.interfaces import QuestionBank, RAGRetriever, RubricProvider
 
@@ -49,6 +50,12 @@ def register_domain(domain: DomainEnum, factory: Callable[[], DomainModule]) -> 
 def clear_registry() -> None:
     """Limpa o registry. Destinado a testes que precisam de isolamento entre casos."""
     _registry.clear()
+
+
+@lru_cache
+def get_cached_domain(domain: DomainEnum) -> DomainModule:
+    """Wrapper cacheado de get_domain para reutilização por request."""
+    return get_domain(domain)
 
 
 def get_domain(domain: DomainEnum) -> DomainModule:
