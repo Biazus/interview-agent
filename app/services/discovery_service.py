@@ -1,35 +1,28 @@
-from app.api.errors import APIError
-from app.core.domain.registry import DomainEnum, DomainNotRegisteredError, get_domain
+from app.core.domain.registry import (
+    DomainEnum,
+    DomainNotRegisteredError,
+    get_cached_domain,
+    list_registered_domains,
+)
+from app.core.exceptions import DomainRequired, InvalidDomain
 
 
 class DiscoveryService:
     def list_domains(self) -> list[str]:
-        return [member.value for member in DomainEnum]
+        return list_registered_domains()
 
     def list_topics(self, domain: str | None) -> list[str]:
         if domain is None:
-            raise APIError(
-                status_code=400,
-                detail="Parâmetro domain é obrigatório.",
-                code="INVALID_DOMAIN",
-            )
+            raise DomainRequired()
 
         try:
             domain_enum = DomainEnum(domain)
-        except ValueError:
-            raise APIError(
-                status_code=400,
-                detail="Domínio inválido.",
-                code="INVALID_DOMAIN",
-            )
+        except ValueError as exc:
+            raise InvalidDomain() from exc
 
         try:
-            module = get_domain(domain_enum)
-        except DomainNotRegisteredError:
-            raise APIError(
-                status_code=400,
-                detail="Domínio não registrado.",
-                code="INVALID_DOMAIN",
-            )
+            module = get_cached_domain(domain_enum)
+        except DomainNotRegisteredError as exc:
+            raise InvalidDomain("Domínio não registrado.") from exc
 
         return module.question_bank.topics()

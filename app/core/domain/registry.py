@@ -52,6 +52,11 @@ def clear_registry() -> None:
     _registry.clear()
 
 
+def list_registered_domains() -> list[str]:
+    """Retorna os valores de domínio efetivamente registrados no registry."""
+    return [domain.value for domain in _registry]
+
+
 @lru_cache
 def get_cached_domain(domain: DomainEnum) -> DomainModule:
     """Wrapper cacheado de get_domain para reutilização por request."""

@@ -5,6 +5,7 @@ from app.core.domain.registry import (
     DomainModule,
     DomainNotRegisteredError,
     get_domain,
+    list_registered_domains,
 )
 from tests.fakes.retriever import FakeRAGRetriever
 
@@ -12,6 +13,14 @@ from tests.fakes.retriever import FakeRAGRetriever
 def test_get_domain_raises_when_not_registered():
     with pytest.raises(DomainNotRegisteredError):
         get_domain(DomainEnum.ASYNC_MESSAGING)
+
+
+def test_list_registered_domains_returns_only_registered(
+    registered_fake_domain: DomainModule,
+):
+    domains = list_registered_domains()
+
+    assert domains == [DomainEnum.ASYNC_MESSAGING.value]
 
 
 def test_get_domain_resolves_registered_domain(

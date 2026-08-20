@@ -11,6 +11,8 @@ from app.core.domain.interfaces import (
     InterviewState,
     Question,
 )
+from app.core.exceptions import InterviewNotFound
+from app.core.llm.interfaces import LLMResponse
 from app.repositories.interview_mapper import evaluation_to_jsonb
 
 
@@ -34,6 +36,47 @@ def _build_turn(
         evaluation_provider=evaluation.raw_response.provider,
         evaluation_model=evaluation.raw_response.model,
         evaluation_raw_response=evaluation_to_jsonb(evaluation),
+    )
+
+
+def _turn_from_payload(
+    interview_id: UUID,
+    turn_number: int,
+    payload: dict[str, object],
+) -> InterviewTurn:
+    raw_payload = payload["evaluation_raw_response"]
+    if isinstance(raw_payload, dict):
+        raw_response = LLMResponse(
+            text=str(raw_payload.get("text", "")),
+            provider=str(payload["evaluation_provider"]),
+            model=str(payload["evaluation_model"]),
+            tokens_used=raw_payload.get("tokens_used"),
+        )
+    else:
+        raw_response = LLMResponse(
+            text="",
+            provider=str(payload["evaluation_provider"]),
+            model=str(payload["evaluation_model"]),
+        )
+
+    question = Question(
+        id=str(payload["question_id"]),
+        topic=str(payload["question_topic"]),
+        difficulty=int(payload["question_difficulty"]),
+        prompt=str(payload["question_prompt"]),
+    )
+    evaluation = Evaluation(
+        topic=question.topic,
+        level=str(payload["evaluation_level"]),
+        feedback=str(payload["evaluation_feedback"]),
+        raw_response=raw_response,
+    )
+    return _build_turn(
+        interview_id,
+        turn_number,
+        question,
+        str(payload["answer_text"]),
+        evaluation,
     )
 
 
@@ -127,20 +170,7 @@ class InterviewRepository:
     async def add_turn(
         self, interview_id: UUID, turn_number: int, **payload: object
     ) -> None:
-        turn = InterviewTurn(
-            interview_id=interview_id,
-            turn_number=turn_number,
-            question_id=str(payload["question_id"]),
-            question_topic=str(payload["question_topic"]),
-            question_difficulty=int(payload["question_difficulty"]),
-            question_prompt=str(payload["question_prompt"]),
-            answer_text=str(payload["answer_text"]),
-            evaluation_level=str(payload["evaluation_level"]),
-            evaluation_feedback=str(payload["evaluation_feedback"]),
-            evaluation_provider=str(payload["evaluation_provider"]),
-            evaluation_model=str(payload["evaluation_model"]),
-            evaluation_raw_response=dict(payload["evaluation_raw_response"]),
-        )
+        turn = _turn_from_payload(interview_id, turn_number, dict(payload))
         self._session.add(turn)
         await self._session.flush()
 
@@ -159,7 +189,7 @@ class InterviewRepository:
 
         interview = await self._session.get(Interview, interview_id)
         if interview is None:
-            raise ValueError(f"Interview {interview_id} not found")
+            raise InterviewNotFound()
 
         _apply_state_to_interview(interview, new_state)
         await self._session.flush()

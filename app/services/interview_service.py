@@ -6,16 +6,45 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.evaluator import EvaluationParseError
 from app.agents.orchestrator import OrchestratorAgent
-from app.api.errors import APIError
 from app.core.domain.interfaces import CandidateReport
 from app.core.domain.registry import (
     DomainEnum,
     DomainNotRegisteredError,
     get_cached_domain,
 )
+from app.core.exceptions import (
+    ActiveInterviewExists,
+    DuplicateTurn,
+    EmptyAnswer,
+    InterviewAlreadyFinished,
+    InterviewNotFinished,
+    InterviewNotFound,
+    InvalidDomain,
+    InvalidTopic,
+    LLMUnavailable,
+    NoActiveInterview,
+)
 from app.core.llm.exceptions import LLMProviderError
-from app.repositories.interview_mapper import to_interview_response, to_report_response
+from app.repositories.interview_mapper import (
+    report_from_row,
+    to_interview_response,
+    to_report_response,
+    to_state,
+)
 from app.repositories.interview_repository import InterviewRepository
+
+_ACTIVE_INTERVIEW_CONSTRAINT = "uq_interviews_candidate_active"
+_DUPLICATE_TURN_CONSTRAINT = "uq_interview_turn_number"
+
+
+def _integrity_constraint_name(exc: IntegrityError) -> str | None:
+    orig = exc.orig
+    if orig is None:
+        return None
+    diag = getattr(orig, "diag", None)
+    if diag is not None:
+        return getattr(diag, "constraint_name", None)
+    return None
 
 
 class InterviewService:
@@ -38,21 +67,13 @@ class InterviewService:
     ) -> dict:
         active = await self._repository.get_active_by_candidate(candidate_id)
         if active is not None:
-            raise APIError(
-                status_code=409,
-                detail="Já existe uma entrevista ativa para este candidato.",
-                code="ACTIVE_INTERVIEW_EXISTS",
-            )
+            raise ActiveInterviewExists()
 
         domain_enum = self._parse_domain(domain)
         module = self._resolve_domain_module(domain_enum)
 
         if topic not in module.question_bank.topics():
-            raise APIError(
-                status_code=400,
-                detail="Tópico inválido para o domínio informado.",
-                code="INVALID_TOPIC",
-            )
+            raise InvalidTopic()
 
         orchestrator = self._orchestrator_factory(domain_enum)
         state = orchestrator.start(topic, difficulty)
@@ -71,37 +92,26 @@ class InterviewService:
             )
         except IntegrityError as exc:
             await self._session.rollback()
-            raise APIError(
-                status_code=409,
-                detail="Já existe uma entrevista ativa para este candidato.",
-                code="ACTIVE_INTERVIEW_EXISTS",
-            ) from exc
+            if _integrity_constraint_name(exc) == _ACTIVE_INTERVIEW_CONSTRAINT:
+                raise ActiveInterviewExists() from exc
+            raise
 
         interview = await self._repository.get_by_id_for_candidate(
             interview_id, candidate_id
         )
         if interview is None:
-            raise APIError(
-                status_code=404,
-                detail="Entrevista não encontrada.",
-                code="INTERVIEW_NOT_FOUND",
-            )
+            raise InterviewNotFound()
 
-        return to_interview_response(interview, state)
+        rehydrated_state = to_state(interview, [])
+        return to_interview_response(interview, rehydrated_state)
 
     async def get_active_interview(self, candidate_id: UUID) -> dict:
         interview = await self._repository.get_active_by_candidate(candidate_id)
         if interview is None:
-            raise APIError(
-                status_code=404,
-                detail="Nenhuma entrevista ativa encontrada.",
-                code="NO_ACTIVE_INTERVIEW",
-            )
+            raise NoActiveInterview()
 
         turns = await self._repository.get_turns(interview.id)
-        from app.repositories import interview_mapper
-
-        state = interview_mapper.to_state(interview, turns)
+        state = to_state(interview, turns)
         return to_interview_response(interview, state)
 
     async def submit_answer(
@@ -111,43 +121,25 @@ class InterviewService:
         answer: str,
     ) -> dict:
         if not answer.strip():
-            raise APIError(
-                status_code=422,
-                detail="A resposta não pode ser vazia.",
-                code="EMPTY_ANSWER",
-            )
+            raise EmptyAnswer()
 
         interview = await self._repository.get_by_id_for_candidate(
             interview_id, candidate_id
         )
         if interview is None:
-            raise APIError(
-                status_code=404,
-                detail="Entrevista não encontrada.",
-                code="INTERVIEW_NOT_FOUND",
-            )
+            raise InterviewNotFound()
 
         if interview.status == "finished":
-            raise APIError(
-                status_code=409,
-                detail="A entrevista já foi finalizada.",
-                code="INTERVIEW_ALREADY_FINISHED",
-            )
+            raise InterviewAlreadyFinished()
 
         turns = await self._repository.get_turns(interview_id)
-        from app.repositories import interview_mapper
-
-        state = interview_mapper.to_state(interview, turns)
+        state = to_state(interview, turns)
         orchestrator = self._orchestrator_factory(DomainEnum(interview.domain))
 
         try:
             new_state = await orchestrator.submit_answer(state, answer)
         except (LLMProviderError, EvaluationParseError) as exc:
-            raise APIError(
-                status_code=503,
-                detail="Serviço de avaliação temporariamente indisponível.",
-                code="LLM_UNAVAILABLE",
-            ) from exc
+            raise LLMUnavailable() from exc
 
         report_to_persist: CandidateReport | None = None
         if new_state.finished:
@@ -166,25 +158,24 @@ class InterviewService:
                 evaluation=evaluation,
                 new_state=new_state,
             )
-            if report_to_persist is not None:
-                await self._repository.save_report(interview_id, report_to_persist)
         except IntegrityError as exc:
             await self._session.rollback()
-            raise APIError(
-                status_code=409,
-                detail="Turno duplicado para esta entrevista.",
-                code="DUPLICATE_TURN",
-            ) from exc
+            if _integrity_constraint_name(exc) == _DUPLICATE_TURN_CONSTRAINT:
+                raise DuplicateTurn() from exc
+            raise
+
+        if report_to_persist is not None:
+            try:
+                async with self._session.begin_nested():
+                    await self._repository.save_report(interview_id, report_to_persist)
+            except IntegrityError:
+                pass
 
         updated = await self._repository.get_by_id_for_candidate(
             interview_id, candidate_id
         )
         if updated is None:
-            raise APIError(
-                status_code=404,
-                detail="Entrevista não encontrada.",
-                code="INTERVIEW_NOT_FOUND",
-            )
+            raise InterviewNotFound()
 
         return to_interview_response(updated, new_state)
 
@@ -193,60 +184,45 @@ class InterviewService:
             interview_id, candidate_id
         )
         if interview is None:
-            raise APIError(
-                status_code=404,
-                detail="Entrevista não encontrada.",
-                code="INTERVIEW_NOT_FOUND",
-            )
+            raise InterviewNotFound()
 
         if interview.status != "finished":
-            raise APIError(
-                status_code=409,
-                detail="A entrevista ainda está em andamento.",
-                code="INTERVIEW_NOT_FINISHED",
-            )
+            raise InterviewNotFinished()
 
         existing = await self._repository.get_report(interview_id)
         if existing is not None:
-            from app.repositories import interview_mapper
-
-            report = interview_mapper.report_from_row(existing)
+            report = report_from_row(existing)
             return to_report_response(interview_id, report)
 
         turns = await self._repository.get_turns(interview_id)
-        from app.repositories import interview_mapper
-
-        state = interview_mapper.to_state(interview, turns)
+        state = to_state(interview, turns)
         orchestrator = self._orchestrator_factory(DomainEnum(interview.domain))
 
         try:
             report = await orchestrator.get_report(state)
         except LLMProviderError as exc:
-            raise APIError(
-                status_code=503,
-                detail="Serviço de avaliação temporariamente indisponível.",
-                code="LLM_UNAVAILABLE",
-            ) from exc
+            raise LLMUnavailable() from exc
 
-        await self._repository.save_report(interview_id, report)
+        try:
+            await self._repository.save_report(interview_id, report)
+        except IntegrityError:
+            await self._session.rollback()
+            existing = await self._repository.get_report(interview_id)
+            if existing is not None:
+                report = report_from_row(existing)
+                return to_report_response(interview_id, report)
+            raise
+
         return to_report_response(interview_id, report)
 
     def _parse_domain(self, domain: str) -> DomainEnum:
         try:
             return DomainEnum(domain)
         except ValueError as exc:
-            raise APIError(
-                status_code=400,
-                detail="Domínio inválido.",
-                code="INVALID_DOMAIN",
-            ) from exc
+            raise InvalidDomain() from exc
 
     def _resolve_domain_module(self, domain_enum: DomainEnum):
         try:
             return get_cached_domain(domain_enum)
         except DomainNotRegisteredError as exc:
-            raise APIError(
-                status_code=400,
-                detail="Domínio não registrado.",
-                code="INVALID_DOMAIN",
-            ) from exc
+            raise InvalidDomain("Domínio não registrado.") from exc

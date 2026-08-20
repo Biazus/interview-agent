@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.orchestrator import OrchestratorAgent
 from app.agents.selector_naive import NaiveSelector
-from app.api.errors import APIError
+from app.core.exceptions import InvalidToken, MissingToken
 from app.core.auth.db_token_validator import DbTokenValidator
 from app.core.db.session import async_session_factory
 from app.core.domain.registry import DomainEnum, DomainModule, get_cached_domain
@@ -94,19 +94,11 @@ def get_token_validator(session: DbSession) -> DbTokenValidator:
 
 def _parse_bearer_token(authorization: str | None) -> str:
     if authorization is None:
-        raise APIError(
-            status_code=401,
-            detail="Token de autenticação ausente.",
-            code="MISSING_TOKEN",
-        )
+        raise MissingToken()
 
     scheme, _, token = authorization.partition(" ")
     if scheme.lower() != "bearer" or not token:
-        raise APIError(
-            status_code=401,
-            detail="Token de autenticação inválido.",
-            code="INVALID_TOKEN",
-        )
+        raise InvalidToken()
 
     return token
 
@@ -118,10 +110,6 @@ async def get_current_candidate_id(
     token = _parse_bearer_token(authorization)
     candidate_id = await validator.validate(token)
     if candidate_id is None:
-        raise APIError(
-            status_code=401,
-            detail="Token de autenticação inválido.",
-            code="INVALID_TOKEN",
-        )
+        raise InvalidToken()
 
     return candidate_id
