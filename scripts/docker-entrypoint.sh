@@ -16,7 +16,7 @@ QdrantClient(host=host, port=port).get_collections()
 done
 
 echo "Applying database migrations..."
-alembic upgrade head
+uv run alembic upgrade head
 
 echo "Seeding Qdrant..."
 uv run python -c "from app.domains.async_messaging.rag_ingestion import ingest_seed_documents; ingest_seed_documents()"

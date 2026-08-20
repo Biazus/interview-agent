@@ -4,7 +4,8 @@ import logging
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, Header
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.orchestrator import OrchestratorAgent
@@ -23,6 +24,8 @@ from app.services.discovery_service import DiscoveryService
 from app.services.interview_service import InterviewService
 
 logger = logging.getLogger(__name__)
+
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_active_domain() -> DomainModule:
@@ -95,33 +98,14 @@ def get_token_validator(session: DbSession) -> DbTokenValidator:
     return DbTokenValidator(repository=_auth_token_repository(session))
 
 
-def _parse_bearer_token(authorization: str | None) -> str:
-    if authorization is None:
-        raise MissingToken()
-
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer":
-        logger.warning(
-            "Invalid authentication token",
-            extra={"reason": "invalid_auth_scheme"},
-        )
-        raise InvalidToken()
-    if not token:
-        logger.warning(
-            "Invalid authentication token",
-            extra={"reason": "missing_bearer_token"},
-        )
-        raise InvalidToken()
-
-    return token
-
-
 async def get_current_candidate_id(
-    authorization: Annotated[str | None, Header()] = None,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
     validator: DbTokenValidator = Depends(get_token_validator),
 ) -> UUID:
-    token = _parse_bearer_token(authorization)
-    candidate_id = await validator.validate(token)
+    if credentials is None:
+        raise MissingToken()
+
+    candidate_id = await validator.validate(credentials.credentials)
     if candidate_id is None:
         logger.warning(
             "Invalid authentication token",
