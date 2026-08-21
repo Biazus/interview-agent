@@ -23,5 +23,9 @@ wheels/
 *.pyd
 *.egg
 
+.coverage
+.coverage.*
+htmlcov/
+
 # My notes
 notes.txt
