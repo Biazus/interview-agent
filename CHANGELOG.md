@@ -8,6 +8,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **CI hard gates (PR4)**
+  - `scripts/ci/check_image_size.sh` — fail if Docker image exceeds **650 MB**
+  - `scripts/ci/check_no_torch.sh` — fail if `torch` or `sentence-transformers` in runtime deps
+  - Qdrant pinned to `v1.12.5` in compose and CI
+
+- **Multi-stage Docker (PR3)**
+  - Multi-stage `Dockerfile` with `UV_NO_CACHE=1` and `libgomp1`
+  - `.dockerignore` excludes tests, git, caches, and docs from build context
+  - Measured image size ~144 MB (CI logs size after build)
+
 - **Seed manifest + RAG readiness**
   - `VectorStore`: `get_collection_info`, `set_collection_metadata`, `drop_collection`
   - `seed_manifest.manifest_matches()` for ingest and readiness checks

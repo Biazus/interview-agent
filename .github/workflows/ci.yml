@@ -31,7 +31,7 @@ jobs:
           --health-retries 5
 
       qdrant:
-        image: qdrant/qdrant:latest
+        image: qdrant/qdrant:v1.12.5
         ports:
           - 6333:6333
 
@@ -70,14 +70,11 @@ jobs:
       - name: Check formatting (ruff)
         run: uv run ruff format --check .
 
+      - name: Check runtime deps exclude torch stack
+        run: bash scripts/ci/check_no_torch.sh
+
       - name: Build Docker image
         run: docker build -t interview-agent-api:ci .
 
-      - name: Log Docker image size
-        run: |
-          SIZE_BYTES=$(docker image inspect --format='{{.Size}}' interview-agent-api:ci)
-          python3 - <<EOF
-          size_bytes = int("${SIZE_BYTES}")
-          size_mb = size_bytes / (1024 * 1024)
-          print(f"Docker image size: {size_bytes} bytes ({size_mb:.2f} MB)")
-          EOF
+      - name: Check Docker image size (650 MB gate)
+        run: bash scripts/ci/check_image_size.sh interview-agent-api:ci
