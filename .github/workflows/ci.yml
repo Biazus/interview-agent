@@ -69,3 +69,15 @@ jobs:
 
       - name: Check formatting (ruff)
         run: uv run ruff format --check .
+
+      - name: Build Docker image
+        run: docker build -t interview-agent-api:ci .
+
+      - name: Log Docker image size
+        run: |
+          SIZE_BYTES=$(docker image inspect --format='{{.Size}}' interview-agent-api:ci)
+          python3 - <<EOF
+          size_bytes = int("${SIZE_BYTES}")
+          size_mb = size_bytes / (1024 * 1024)
+          print(f"Docker image size: {size_bytes} bytes ({size_mb:.2f} MB)")
+          EOF

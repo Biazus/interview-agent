@@ -26,7 +26,9 @@ A central **registry** wires domains at startup. The orchestrator picks a domain
 | LLM | Groq → OpenRouter fallback chain |
 | CI | GitHub Actions (Postgres + Qdrant service containers) |
 
-> **Embeddings runtime:** Production uses **fastembed** (ONNX) instead of PyTorch/sentence-transformers. On Debian slim Docker images you may need `libgomp1` (`apt-get install -y libgomp1`) for ONNX Runtime; see [docs/current_plan.md](docs/current_plan.md) PR3 for Dockerfile changes.
+> **Embeddings runtime:** Production uses **fastembed** (ONNX) instead of PyTorch/sentence-transformers. The multi-stage Dockerfile installs `libgomp1` for ONNX Runtime on Debian slim.
+
+> **Docker image size:** Multi-stage build (Aug 2026, `linux/amd64`): **151,330,784 bytes (~144 MB)** — down from ~8.54 GB with torch. CI logs size on each run (non-blocking).
 
 ## Quick start (Docker)
 
