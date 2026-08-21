@@ -3,13 +3,19 @@
 import importlib
 import logging
 import os
+import sys
 import time
+from pathlib import Path
 
-from qdrant_client import QdrantClient
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-import app.bootstrap  # noqa: F401 — registers domains on import
+from qdrant_client import QdrantClient  # noqa: E402
 
-from app.core.domain.registry import list_registered_domains
+import app.bootstrap  # noqa: F401, E402 — registers domains on import
+
+from app.core.domain.registry import list_registered_domains  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
