@@ -1,3 +1,4 @@
+import importlib
 import logging
 from collections.abc import Callable
 from uuid import UUID
@@ -51,16 +52,26 @@ def _integrity_constraint_name(exc: IntegrityError) -> str | None:
     return None
 
 
+def _default_rag_readiness_check(
+    collection_name: str, manifest_files: tuple[str, ...]
+) -> None:
+    from app.core.rag.rag_readiness import check_rag_ready
+
+    check_rag_ready(collection_name, manifest_files)
+
+
 class InterviewService:
     def __init__(
         self,
         repository: InterviewRepository,
         session: AsyncSession,
         orchestrator_factory: Callable[[DomainEnum], OrchestratorAgent],
+        rag_readiness_check: Callable[[str, tuple[str, ...]], None] | None = None,
     ) -> None:
         self._repository = repository
         self._session = session
         self._orchestrator_factory = orchestrator_factory
+        self._rag_readiness_check = rag_readiness_check or _default_rag_readiness_check
 
     async def start_interview(
         self,
@@ -85,6 +96,13 @@ class InterviewService:
 
         if topic not in module.question_bank.topics():
             raise InvalidTopic()
+
+        rag_config = importlib.import_module(
+            f"app.domains.{domain_enum.value}.rag_config"
+        )
+        self._rag_readiness_check(
+            rag_config.COLLECTION_NAME, rag_config.SEED_MANIFEST_FILES
+        )
 
         orchestrator = self._orchestrator_factory(domain_enum)
         state = orchestrator.start(topic, difficulty)

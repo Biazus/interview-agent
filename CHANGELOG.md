@@ -4,6 +4,30 @@ All notable changes to this project are documented here.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Seed manifest + RAG readiness**
+  - `VectorStore`: `get_collection_info`, `set_collection_metadata`, `drop_collection`
+  - `seed_manifest.manifest_matches()` for ingest and readiness checks
+  - `check_rag_ready(collection_name, manifest_files, …)` — domain-agnostic; uses `get_vector_store()` (`QDRANT_*` settings)
+  - `RagNotReady` → **503** `RAG_NOT_READY` on `start_interview` (not on `submit_answer`)
+  - Injectable `rag_readiness_check: Callable[[str, tuple[str, ...]], None]` on `InterviewService`
+  - Decoupled seed: `scripts/run_seed.py`, compose profile `seed`, entrypoint migrate + uvicorn only
+  - Runbook [`docs/runbook/rag_seed.md`](docs/runbook/rag_seed.md) (scenarios A–D)
+  - CI seed via `run_seed.py`
+  - 14 PR2 tests (readiness, API 503, submit degraded); full suite 128 passed
+
+### Changed
+
+- **fastembed production swap**
+  - Replaced `sentence-transformers` / torch with **fastembed** (ONNX) in `EmbeddingProvider`
+  - Removed torch from runtime dependencies; golden retrieval 8/8 in CI
+  - `VECTOR_SIZE` from `embedding_config` SSOT
+
+- **Docker startup (PR2)** — API entrypoint no longer seeds Qdrant on every boot; operator runs seed job explicitly before first start or after manifest/embedder change.
+
 ## [0.1.0] - 2026-08-20
 
 ### Added

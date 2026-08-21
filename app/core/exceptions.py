@@ -62,6 +62,11 @@ class LLMUnavailable(AppError):
     message = "Serviço de avaliação temporariamente indisponível."
 
 
+class RagNotReady(AppError):
+    code = "RAG_NOT_READY"
+    message = "Base de conhecimento RAG indisponível. Execute o seed antes de iniciar entrevistas."
+
+
 class EmailAlreadyRegistered(AppError):
     code = "EMAIL_ALREADY_REGISTERED"
     message = "E-mail já cadastrado."

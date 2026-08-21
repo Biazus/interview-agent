@@ -46,9 +46,12 @@ Severity: **Critical** · **High** · **Medium** · **Low** · **Info**
 
 Root cause: `sentence-transformers` → `torch 2.13` resolves the **full CUDA 13 + NVIDIA stack** on Linux PyPI (~2.5+ GB of wheels) even though the container has **no GPU**. The `uv sync` layer alone is ~5.4 GB. The old “~500 MB” estimate counted only the torch wheel, not NVIDIA/Triton or build cache overhead.
 
+> **v0.2 progress:** PR1 removed `sentence-transformers` / `torch` from runtime deps (fastembed). PR2 decoupled seed from entrypoint. Docker image slim + hard size gate remain PR3/PR4.
+
 - [ ] **[Critical]** PyTorch 2.13 Linux wheel pulls **CUDA toolkit + nvidia-*** (`cublas`, `cudnn`, `nccl`, `triton`, etc.) via default PyPI resolution — useless in a CPU-only container.  
   **Impact:** ~2.5+ GB wasted; slow pull/build; large CVE surface; no performance gain without GPU.  
-  **Recommendation:** Force **torch CPU-only** via `tool.uv.sources` / PyTorch CPU index (`download.pytorch.org/whl/cpu`); regenerate `uv.lock`; rebuild and measure. **Target: ~1–1.5 GB image.**
+  **Recommendation:** Force **torch CPU-only** via `tool.uv.sources` / PyTorch CPU index (`download.pytorch.org/whl/cpu`); regenerate `uv.lock`; rebuild and measure. **Target: ~1–1.5 GB image.**  
+  **Progress:** Superseded by fastembed (done PR1) — torch removed from runtime deps; image still large until PR3 multi-stage build.
 
 - [ ] **[High]** Dockerfile installs deps in a single stage with no cache cleanup (`RUN pip install uv && uv sync --frozen --no-dev`).  
   **Impact:** Possible duplication of uv wheel cache + `.venv` in the final layer.  
@@ -59,7 +62,8 @@ Root cause: `sentence-transformers` → `torch 2.13` resolves the **full CUDA 13
 
 - [ ] **[High]** `docker-entrypoint.sh` runs `ingest_seed_documents()` on **every** API start (loads `SentenceTransformer`, re-embeds seed docs).  
   **Impact:** Slow cold start (~1 min first boot); model may load twice (seed subprocess + API process); unnecessary CPU on restarts.  
-  **Recommendation:** Seed only when Qdrant collection is empty/missing; or use a pre-populated Qdrant volume snapshot.
+  **Recommendation:** Seed only when Qdrant collection is empty/missing; or use a pre-populated Qdrant volume snapshot.  
+  **Progress:** Done PR2 — entrypoint is migrate + uvicorn only; seed via `scripts/run_seed.py` + compose profile `seed`; manifest skip on match ([`docs/runbook/rag_seed.md`](./runbook/rag_seed.md), ADR-005).
 
 - [ ] **[High]** `/health` returns only `{"status":"ok"}` (`app/api/main.py`) — no dependency checks.  
   **Impact:** Orchestrators mark pod healthy when Postgres or Qdrant is down.  
@@ -70,7 +74,8 @@ Root cause: `sentence-transformers` → `torch 2.13` resolves the **full CUDA 13
 
 - [ ] **[Medium — v2]** Replace `sentence-transformers` with **fastembed** (ONNX Runtime) or a dedicated embedding sidecar.  
   **Impact:** Removes torch entirely from API image; **requires re-indexing Qdrant** (vectors from different embedders are not comparable).  
-  **Recommendation:** Benchmark `all-MiniLM-L6-v2` parity; plan migration. **Target API image: ~200–400 MB.**
+  **Recommendation:** Benchmark `all-MiniLM-L6-v2` parity; plan migration. **Target API image: ~200–400 MB.**  
+  **Progress:** Done PR1 — fastembed in production; golden 8/8; torch/ST removed from runtime deps. Sidecar remains a scale option (ADR-001).
 
 - [ ] **[Low]** HuggingFace model `all-MiniLM-L6-v2` (~90 MB) downloaded at runtime on first use, not baked into the image.  
   **Recommendation:** Optional — pre-download in Dockerfile (`HF_HOME`) for predictable cold start.
@@ -198,15 +203,15 @@ Root cause: `sentence-transformers` → `torch 2.13` resolves the **full CUDA 13
 
 | # | Item | Severity | Effort |
 |---|------|----------|--------|
-| 1 | **Torch CPU-only** — remove CUDA/NVIDIA from Docker image | Critical | Low |
-| 2 | Dockerfile cache cleanup + `.dockerignore` + multi-stage | High | Low |
-| 3 | Structured output in `EvaluatorAgent` | Critical | High |
-| 4 | `max_length` on answer/password | Critical | Low |
-| 5 | Idempotent / conditional Qdrant seed on entrypoint | High | Low |
-| 6 | Readiness check (Postgres + Qdrant) | High | Low |
-| 7 | API tests: ownership 404, report retry, duplicate turn | High | Low |
-| 8 | Move `pytest` to dev; remove dead deps | High | Low |
-| 9 | Alembic-based test fixtures | High | Medium |
-| 10 | Evaluate **fastembed** (v2 — re-index Qdrant) | Medium | High |
+| 1 | **Torch CPU-only** — remove CUDA/NVIDIA from Docker image | Critical | Low | **Superseded PR1** (fastembed); slim build PR3 |
+| 2 | Dockerfile cache cleanup + `.dockerignore` + multi-stage | High | Low | PR3 |
+| 3 | Structured output in `EvaluatorAgent` | Critical | High | Open |
+| 4 | `max_length` on answer/password | Critical | Low | Open |
+| 5 | Idempotent / conditional Qdrant seed on entrypoint | High | Low | **Done PR2** |
+| 6 | Readiness check (Postgres + Qdrant) | High | Low | Open (`/ready` — PR3/PR4) |
+| 7 | API tests: ownership 404, report retry, duplicate turn | High | Low | Open |
+| 8 | Move `pytest` to dev; remove dead deps | High | Low | Open |
+| 9 | Alembic-based test fixtures | High | Medium | Open |
+| 10 | Evaluate **fastembed** (v2 — re-index Qdrant) | Medium | High | **Done PR1** |
 | 11 | Token purge + optional logout | High | Medium |
 | 12 | JSON logging + request ID + LLM token metrics | Low | Medium |

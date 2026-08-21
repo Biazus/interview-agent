@@ -19,6 +19,7 @@ from app.core.exceptions import (
     LLMUnavailable,
     MissingToken,
     NoActiveInterview,
+    RagNotReady,
 )
 
 _APP_ERROR_STATUS: dict[type[AppError], int] = {
@@ -33,6 +34,7 @@ _APP_ERROR_STATUS: dict[type[AppError], int] = {
     EmptyAnswer: 422,
     DuplicateTurn: 409,
     LLMUnavailable: 503,
+    RagNotReady: 503,
     EmailAlreadyRegistered: 409,
     InvalidCredentials: 401,
     MissingToken: 401,

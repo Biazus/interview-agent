@@ -18,7 +18,4 @@ done
 echo "Applying database migrations..."
 uv run alembic upgrade head
 
-echo "Seeding Qdrant..."
-uv run python -c "from app.domains.async_messaging.rag_ingestion import ingest_seed_documents; ingest_seed_documents()"
-
 exec uv run uvicorn app.api.main:app --host 0.0.0.0 --port 8000

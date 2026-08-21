@@ -22,3 +22,6 @@ wheels/
 *.pyo
 *.pyd
 *.egg
+
+# My notes
+notes.txt

@@ -1,6 +1,6 @@
 # Current Plan — v0.2 Deploy Hardening (fastembed + seed híbrido)
 
-**Status:** Planning complete · **Architectural review:** approved with reservations (P0/P1 incorporated) · **Implementation:** not started  
+**Status:** PR0 done · **PR1 done** · **PR2 done** · **PR3:** next  
 **Last updated:** August 2026  
 **Owner decisions:** Miller  
 
@@ -17,8 +17,8 @@ Related docs: [`technical_roadmap.md`](./technical_roadmap.md) · [`product_road
 | Docker image | **8.54 GB** (`interview-agent-api:latest`) | **≤ 650 MB** (CI hard gate; aspirational ~200–400 MB) |
 | Cold start | ~1 min | Seconds–tens of seconds (after seed skip on restart) |
 | Root cause | `sentence-transformers` → torch 2.13 + CUDA/NVIDIA stack in CPU-only container | Remove torch; use **fastembed** (ONNX) |
-| Seed | `ingest_seed_documents()` on **every** API boot | Decoupled init job + manifest hash |
-| RAG failure mode | Empty retrieval → LLM evaluates without context (silent) | **`RAG_NOT_READY` (503)** on `start_interview` |
+| Seed | `ingest_seed_documents()` on **every** API boot | Decoupled init job + manifest hash *(PR2 ✅)* |
+| RAG failure mode | Empty retrieval → LLM evaluates without context (silent) | **`RAG_NOT_READY` (503)** on `start_interview` *(PR2 ✅)* |
 
 ---
 
@@ -35,8 +35,8 @@ Related docs: [`technical_roadmap.md`](./technical_roadmap.md) · [`product_road
 | **CI gates** | PR1: golden test + smoke import · PR3: image size **log** · PR4: hard **650 MB** + no torch | Hard size gate from PR1 |
 | **libgomp1** | PR1: README note · PR3: Dockerfile fix if needed | Fix in PR1 Dockerfile (avoid double Dockerfile churn) |
 | **Config SSOT** | **Two layers:** core `embedding_config` (model + dims) · domain `rag_config` (collection + seed files) | Single `embedding_config` with domain paths in core |
-| **VectorStore** | PR2 extends with metadata, drop, `points_count` before manifest logic | Direct `QdrantClient` in ingestion/readiness |
-| **Readiness scope** | `check_rag_ready(collection_name)` derived from **requested domain** | Global constant `COLLECTION_ASYNC_MESSAGING` in service |
+| **VectorStore** | PR2 extends with metadata, drop, `points_count` before manifest logic *(✅ PR2)* | Direct `QdrantClient` in ingestion/readiness |
+| **Readiness scope** | `check_rag_ready(collection_name, manifest_files, …)` derived from **requested domain** | Global constant `COLLECTION_ASYNC_MESSAGING` in service |
 
 ---
 
@@ -52,11 +52,11 @@ Incorporated after review. Goal: keep `app/core/rag/` domain-agnostic; manifest 
 | `rag_config.py` | `app/domains/async_messaging/` | `COLLECTION_NAME`, `SEED_MANIFEST_FILES` |
 
 **Consumers:**
-- Core: `embeddings.py`, `vector_store.py` (import `VECTOR_SIZE`), benchmark script
+- Core: `embeddings.py`, `vector_store.py` (import `VECTOR_SIZE`), golden/benchmark tooling
 - Domain: `rag_ingestion.py`, golden tests, seed job
 - `seed_manifest.py`: pure functions `compute_manifest_hash(files, model_id)` and `manifest_matches(...)` — **no** domain imports
 
-### P0 — VectorStore extension (PR2, before manifest logic)
+### P0 — VectorStore extension (PR2 ✅)
 
 Add to `app/core/rag/vector_store.py`:
 
@@ -68,31 +68,43 @@ Add to `app/core/rag/vector_store.py`:
 
 `rag_ingestion.py` and `rag_readiness.py` use **only** `VectorStore` — no direct `QdrantClient`.
 
-### P0 — Readiness by domain (PR2)
+### P0 — Readiness by domain (PR2 ✅)
 
 ```python
-# rag_readiness.py
-def check_rag_ready(collection_name: str, *, vector_store: VectorStore | None = None) -> None:
+# rag_readiness.py — core domain-agnostic; uses get_vector_store() (settings QDRANT_*)
+def check_rag_ready(
+    collection_name: str,
+    manifest_files: tuple[str, ...],
+    *,
+    vector_store: VectorStore | None = None,
+    model_id: str = EMBEDDING_MODEL_ID,
+) -> None:
     """Raises RagNotReady if collection empty or manifest stale."""
 ```
 
 In `InterviewService.start_interview`:
 1. Resolve domain module from registry
-2. Read `COLLECTION_NAME` from domain `rag_config` (not a core constant)
-3. Call `check_rag_ready(collection_name)` **after** topic validation, **before** `orchestrator.start()`
+2. Read `COLLECTION_NAME` and `SEED_MANIFEST_FILES` from domain `rag_config` (not core constants)
+3. Call `check_rag_ready(collection_name, manifest_files)` **after** topic validation, **before** `orchestrator.start()`
 
 ### P1 — Testability (PR0–PR2)
 
-| Test file | Scope |
-|-----------|-------|
-| `tests/unit/core/rag/test_seed_manifest.py` | Hash stable; file change; model ID change; legacy missing metadata |
-| `tests/unit/core/rag/test_rag_readiness.py` | Mock `VectorStore`: empty, hash match, mismatch, no metadata |
-| `tests/api/test_interviews_rag_not_ready.py` | 503 with **isolated** empty/stale Qdrant (not CI pre-seeded state) |
-| `tests/api/test_interviews_submit_answer_rag_degraded.py` | `submit_answer` **does not** 503 when Qdrant empty mid-session (intentional) |
+| Test file | Scope | Status |
+|-----------|-------|--------|
+| `tests/unit/core/rag/test_seed_manifest.py` | Hash stable; file/model change | ✅ PR0 |
+| `tests/integration/rag/test_golden_retrieval.py` | 8/8 top-1 via Qdrant | ✅ PR1 Red |
+| `tests/unit/core/rag/test_embeddings.py` | fastembed dims, batch, M4 | ✅ PR1 Red |
+| `tests/unit/core/rag/test_vector_store_vector_size.py` | `VECTOR_SIZE` from config | ✅ PR1 Red |
+| `tests/ci/test_no_torch_in_runtime_deps.py` | No torch/ST in runtime deps | ✅ PR1 Red |
+| `tests/unit/core/rag/test_rag_readiness.py` | Mock `VectorStore`; qdrant_unavailable; settings host | ✅ PR2 (9 tests) |
+| `tests/api/test_interviews_rag_not_ready.py` | 503 isolated empty/stale Qdrant | ✅ PR2 (3 tests) |
+| `tests/api/test_interviews_submit_answer_rag_degraded.py` | No 503 on submit mid-session | ✅ PR2 (2 tests) |
 
-**InterviewService injection (PR2):** optional `rag_readiness_check: Callable[[str], None]` (default: real implementation) — enables unit test of 503 without Qdrant; API test complements with real empty collection.
+**PR2 test total:** 14 tests · full suite **128 passed**.
 
-**PR0 blocker:** all 8 `expected_top1_source` values in `golden_queries.yaml` must be **empirically validated** via benchmark before merge — no guessed doc IDs.
+**InterviewService injection (PR2):** optional `rag_readiness_check: Callable[[str, tuple[str, ...]], None]` (default: `_default_rag_readiness_check`).
+
+**Golden queries:** all 8 `expected_top1_source` empirically validated in PR0 (GO). PR1 CI requires **8/8** after fastembed swap + re-seed.
 
 ---
 
@@ -100,90 +112,93 @@ In `InterviewService.start_interview`:
 
 Merge order: **PR0 → PR1 → PR2 → PR3 → PR4**. Each PR merges to `main` before the next starts.
 
-**PR0 is a human gate:** without GO, do not open PR1.
+**PR0 is a human gate:** without GO, do not open PR1. **GO recorded** — PR1 unlocked.
 
 ```
-PR0 Spike GO/NO-GO
-  → PR1 fastembed swap + golden CI
-  → PR2 seed manifest + RAG_NOT_READY + compose seed profile
-  → PR3 Docker slim + size log
+PR0 Spike GO/NO-GO  ✅ DONE
+  → PR1 fastembed swap + golden CI  ✅ DONE
+  → PR2 seed manifest + RAG_NOT_READY + compose seed profile  ✅ DONE
+  → PR3 Docker slim + size log  ← current
   → PR4 CI hard gates + todo.md closure
 ```
 
-### PR0 — GO/NO-GO fastembed parity
+### PR0 — GO/NO-GO fastembed parity ✅ DONE
 
 **Goal:** Prove MiniLM parity before changing production embedder. No API/runtime behavior change.
 
-| Create / change | Purpose |
-|-----------------|---------|
-| `app/core/rag/embedding_config.py` | `EMBEDDING_MODEL_ID`, `VECTOR_SIZE` only (core SSOT) |
-| `app/domains/async_messaging/rag_config.py` | `COLLECTION_NAME`, `SEED_MANIFEST_FILES` (domain SSOT) |
-| `app/domains/async_messaging/golden_queries.yaml` | 8 fixed queries + empirically validated `expected_top1_source` |
-| `scripts/benchmark_embedding_parity.py` | Runs M1–M4; exit 0=GO, 1=NO-GO |
-| `pyproject.toml` | `fastembed` in **dev** group only (PR0) |
-| `docs/rag_migration.md` | How to run benchmark |
-| `docs/adr/ADR-005-qdrant-seed-strategy.md` | Seed 2D hybrid decision |
-| `tests/unit/core/rag/test_seed_manifest.py` | Hash determinism (stub API; full impl PR2) |
+| Create / change | Purpose | Status |
+|-----------------|---------|--------|
+| `app/core/rag/embedding_config.py` | `EMBEDDING_MODEL_ID`, `VECTOR_SIZE` only (core SSOT) | ✅ |
+| `app/domains/async_messaging/rag_config.py` | `COLLECTION_NAME`, `SEED_MANIFEST_FILES` (domain SSOT) | ✅ |
+| `app/domains/async_messaging/golden_queries.yaml` | 8 queries + validated `expected_top1_source` | ✅ |
+| `app/core/rag/seed_manifest.py` | `compute_manifest_hash()` + `manifest_matches()` (PR2) | ✅ |
+| `pyproject.toml` | `fastembed` in **dev** group only | ✅ |
+| `docs/archive/rag_migration.md` | PR0 runbook (archived after GO) | ✅ |
+| `docs/adr/ADR-005-qdrant-seed-strategy.md` | Seed 2D hybrid decision | ✅ |
+| `tests/unit/core/rag/test_embedding_config.py` | Core SSOT boundary | ✅ |
+| `tests/unit/domains/async_messaging/test_rag_config.py` | Domain SSOT | ✅ |
+| `tests/unit/core/rag/test_seed_manifest.py` | Hash determinism | ✅ |
+| `tests/unit/domains/async_messaging/test_golden_queries_schema.py` | Golden YAML schema | ✅ |
 
-**GO criteria:**
+**GO criteria (all passed):**
 
-| ID | Metric | Threshold |
-|----|--------|-----------|
-| M1 | Top-1 doc ID match (ST vs fastembed) | ≥ **6/8** queries |
-| M2 | Top-3 overlap (expected source in top-3) | ≥ **80%** |
-| M3 | Vector dimensions | **384** |
-| M4 | Self-similarity `cosine(embed(t), embed(t))` | ≥ **0.999** |
+| ID | Metric | Threshold | Result |
+|----|--------|-----------|--------|
+| M1 | Top-1 doc ID match (ST vs fastembed) | ≥ **6/8** | **7/8** |
+| M2 | Top-3 overlap | ≥ **80%** | **100%** |
+| M3 | Vector dimensions | **384** | **384** |
+| M4 | Self-similarity | ≥ **0.999** | **1.0** |
 
-**Miller validation:**
-```bash
-uv sync --group dev
-uv run python scripts/benchmark_embedding_parity.py --verbose
-```
+**Notes:** Parity script removed after GO; runbook archived at `docs/archive/rag_migration.md`. Production embedder unchanged until PR1.
 
 ---
 
-### PR1 — fastembed production swap
+### PR1 — fastembed production swap ✅ DONE
 
 **Goal:** Replace `EmbeddingProvider`; remove torch from lockfile; CI golden retrieval.
 
-| Change | Purpose |
-|--------|---------|
-| `app/core/rag/embeddings.py` | fastembed `TextEmbedding`; import dims from `embedding_config` |
-| `app/core/rag/vector_store.py` | Remove local `_VECTOR_SIZE`; import `VECTOR_SIZE` from `embedding_config` |
-| `pyproject.toml` / `uv.lock` | `fastembed` runtime; remove `sentence-transformers` |
-| `tests/integration/rag/test_golden_retrieval.py` | CI: **8/8** top-1 (stricter than PR0 GO) |
-| `tests/unit/core/rag/test_embeddings.py` | dims, batch, M4 |
-| `.github/workflows/ci.yml` | Golden test after seed step; smoke import |
-| `README.md` | `libgomp1` note for slim images |
+| Change | Purpose | Status |
+|--------|---------|--------|
+| `app/core/rag/embeddings.py` | fastembed `TextEmbedding`; import dims from `embedding_config` | ✅ |
+| `app/core/rag/vector_store.py` | Remove `_VECTOR_SIZE`; import `VECTOR_SIZE` from `embedding_config` | ✅ |
+| `pyproject.toml` / `uv.lock` | `fastembed` runtime; remove `sentence-transformers` | ✅ |
+| `tests/integration/rag/test_golden_retrieval.py` | CI: **8/8** top-1 | ✅ |
+| `tests/unit/core/rag/test_embeddings.py` | dims, batch, M4 | ✅ |
+| `tests/unit/core/rag/test_vector_store_vector_size.py` | Config-driven vector size | ✅ |
+| `tests/ci/test_no_torch_in_runtime_deps.py` | No torch/ST in prod deps | ✅ |
+| `.github/workflows/ci.yml` | Golden test after seed step; smoke import | ✅ |
+| `README.md` | `libgomp1` note for slim images | ✅ |
 
 **Merge criteria:** full pytest green; no `torch` / `sentence-transformers` in runtime deps; golden 8/8 in CI.
 
-**Post-merge (operators):** wipe stale Qdrant volume or re-seed — see runbook below.
+**Post-merge (operators):** wipe stale Qdrant volume or re-seed — see runbook scenario A.
 
 ---
 
-### PR2 — Seed manifest + RAG_NOT_READY
+### PR2 — Seed manifest + RAG_NOT_READY ✅ DONE
 
 **Goal:** Seed outside entrypoint; versioned manifest; fail-fast on start.
 
-| Create / change | Purpose |
-|-----------------|---------|
-| `app/core/rag/vector_store.py` | **First:** `get_collection_info`, `set_collection_metadata`, `drop_collection` |
-| `app/core/rag/seed_manifest.py` | Pure `compute_manifest_hash(files, model_id)` + compare helpers |
-| `app/core/rag/rag_readiness.py` | `check_rag_ready(collection_name: str)` via `VectorStore` only |
-| `app/domains/async_messaging/rag_ingestion.py` | Drop+reseed; write metadata; uses domain `rag_config` + `VectorStore` |
-| `app/core/exceptions.py` + `app/api/errors.py` | `RagNotReady` → **503** `RAG_NOT_READY` |
-| `app/services/interview_service.py` | Resolve domain collection → readiness check; injectable `rag_readiness_check` |
-| `scripts/docker-entrypoint.sh` | **Remove** unconditional seed |
-| `scripts/run_seed.py` | Iterate registered domains (avoids hardcoded domain import in Compose) |
-| `docker-compose.yml` | Service `seed` with `profiles: ["seed"]` → `run_seed.py` |
-| `docs/runbook/rag_seed.md` | Upgrade scenarios A–D |
-| `tests/unit/core/rag/test_seed_manifest.py` | Full unit coverage |
-| `tests/unit/core/rag/test_rag_readiness.py` | Mock `VectorStore` scenarios |
-| `tests/api/test_interviews_rag_not_ready.py` | 503 with isolated empty/stale Qdrant |
-| `tests/api/test_interviews_submit_answer_rag_degraded.py` | Assert no 503 on submit when RAG unavailable |
+| Create / change | Purpose | Status |
+|-----------------|---------|--------|
+| `app/core/rag/vector_store.py` | **First:** `get_collection_info`, `set_collection_metadata`, `drop_collection` | ✅ |
+| `app/core/rag/seed_manifest.py` | `manifest_matches()` for ingest + readiness | ✅ |
+| `app/core/rag/rag_readiness.py` | `check_rag_ready(collection_name, manifest_files, …)` via `VectorStore` only | ✅ |
+| `app/domains/async_messaging/rag_ingestion.py` | Manifest skip / drop+reseed / metadata | ✅ |
+| `app/core/exceptions.py` + `app/api/errors.py` | `RagNotReady` → **503** `RAG_NOT_READY` on `start_interview` only | ✅ |
+| `app/services/interview_service.py` | Resolve domain collection + manifest → readiness; injectable `rag_readiness_check` | ✅ |
+| `scripts/docker-entrypoint.sh` | **Remove** unconditional seed — migrate + uvicorn only | ✅ |
+| `scripts/run_seed.py` | Iterate registered domains | ✅ |
+| `docker-compose.yml` | Service `seed` with `profiles: ["seed"]` → `run_seed.py` | ✅ |
+| `docs/runbook/rag_seed.md` | Upgrade scenarios A–D | ✅ |
+| `.github/workflows/ci.yml` | CI seed via `run_seed.py` | ✅ |
+| `tests/unit/core/rag/test_rag_readiness.py` | Mock `VectorStore`; qdrant_unavailable; settings host | ✅ |
+| `tests/api/test_interviews_rag_not_ready.py` | 503 with isolated empty/stale Qdrant | ✅ |
+| `tests/api/test_interviews_submit_answer_rag_degraded.py` | Assert no 503 on submit when RAG unavailable | ✅ |
 
-**Optional:** `EvaluatorAgent` logs ERROR if `chunks == []` (does not raise — safety net only).
+**Post-merge notes:** Operational logs in EN. `submit_answer` does **not** raise `RAG_NOT_READY` (mid-session degradation allowed). Full suite **128 passed** (14 PR2 tests).
+
+**Optional (not implemented):** `EvaluatorAgent` logs ERROR if `chunks == []` (safety net only).
 
 **First boot flow:**
 ```bash
@@ -231,7 +246,7 @@ EMBEDDING_MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"
 VECTOR_SIZE = 384
 ```
 
-Consumers: `embeddings.py`, `vector_store.py`, benchmark script, `seed_manifest.py` (model ID only).
+Consumers: `embeddings.py`, `vector_store.py`, `seed_manifest.py` (model ID only).
 
 **Domain** — `app/domains/async_messaging/rag_config.py`:
 
@@ -240,7 +255,7 @@ COLLECTION_NAME = "async_messaging"
 SEED_MANIFEST_FILES = ("app/domains/async_messaging/rag_seed.yaml",)
 ```
 
-Consumers: `rag_ingestion.py`, `rag_readiness` (via service resolving domain), golden tests, seed job.
+Consumers: `rag_ingestion.py`, `rag_readiness` (via service), golden tests, seed job.
 
 ### Seed manifest algorithm
 
@@ -257,22 +272,17 @@ parts.append(f"model:{model_id}")
 SEED_MANIFEST_HASH = sha256("|".join(parts))
 ```
 
-Call site passes `SEED_MANIFEST_FILES` + `EMBEDDING_MODEL_ID` from respective config modules.
-
-**Persist in Qdrant collection metadata:**
-- `seed_manifest_hash`
-- `embedding_model_id`
-- `seed_manifest_files`
-- `seeded_at` (ISO timestamp)
+**Persist in Qdrant collection metadata (PR2):**
+- `seed_manifest_hash`, `embedding_model_id`, `seed_manifest_files`, `seeded_at`
 
 **Ingest logic (PR2)** — all via `VectorStore`:
 1. `ensure_collection`
 2. `get_collection_info` → if `points_count == 0` → seed
 3. If metadata missing **or** hash ≠ computed → `drop_collection` → recreate → seed
 4. If hash match → skip (log INFO)
-5. After seed → `set_collection_metadata` with hash, model ID, files, `seeded_at`
+5. After seed → `set_collection_metadata`
 
-**Readiness (API):** does **not** auto-reseed — `check_rag_ready(domain_collection)` raises `RagNotReady`; operator runs seed job. Collection name comes from domain `rag_config`, not core.
+**Readiness (API):** does **not** auto-reseed — raises `RagNotReady`; operator runs seed job.
 
 ### `golden_queries.yaml` schema
 
@@ -286,23 +296,21 @@ queries:
   - id: gq_dlq_poison
     query: "<text>"
     topic: dead_letter_queue
-    expected_top1_source: doc_dlq_03   # must exist in rag_seed.yaml
+    expected_top1_source: doc_dlq_03
 ```
 
-**Planned 8 queries (2 per topic):** `dead_letter_queue`, `visibility_timeout`, `fan_out`, `batch_processing`.
+8 queries (2 per topic): `dead_letter_queue`, `visibility_timeout`, `fan_out`, `batch_processing`.
 
-Seed doc IDs in repo today: `doc_dlq_01`…`doc_dlq_06`, `doc_visibility_01/02`, `doc_fanout_01/02`, `doc_batch_01/02`.
+PR1 CI requires **8/8** top-1 after fastembed swap + Qdrant re-seed.
 
-> **PR0 blocker:** run benchmark and **materialize** all 8 `expected_top1_source` in YAML before merge. Do not guess top-1 IDs. PR1 CI requires **8/8** — unstable queries that pass GO (6/8) but fail one ID block PR1.
-
-### `RAG_NOT_READY` API contract
+### `RAG_NOT_READY` API contract (PR2)
 
 | Field | Value |
 |-------|-------|
-| When | `start_interview` and Qdrant collection empty or manifest mismatch |
+| When | `start_interview` and Qdrant empty or manifest mismatch |
 | HTTP | **503** |
 | Code | `RAG_NOT_READY` |
-| Not the same as | `INVALID_TOPIC` (question bank), `NO_QUESTIONS` (orchestrator exhaustion) |
+| Not the same as | `INVALID_TOPIC`, `NO_QUESTIONS` |
 
 Example body:
 ```json
@@ -314,62 +322,70 @@ Example body:
 
 ---
 
-## Runbook — three scenarios
+## Runbook — four scenarios
 
 ### A — Upgrade PR1 (embedder change only)
 
 1. `docker compose down`
-2. Remove Qdrant volume (`qdrant_data`) or full `docker compose down -v`
-3. `docker compose up -d` + seed (explicit step pre-PR2; post-PR2 use profile `seed`)
-4. Run golden tests / manual RAG script
+2. Remove Qdrant volume (`qdrant_data`) or `docker compose down -v`
+3. Re-seed (pre-PR2: entrypoint/ingest; post-PR2: profile `seed`)
+4. Run golden tests
 
 ### B — Upgrade PR2+ (manifest in place)
 
-1. Run `docker compose --profile seed run --rm seed`
-2. Seed job detects hash mismatch → drop + reseed automatically
-3. `docker compose up -d api` (entrypoint: migrate + uvicorn only)
+1. `docker compose --profile seed run --rm seed`
+2. Seed job detects hash mismatch → drop + reseed
+3. `docker compose up -d api`
 
-### C — Dev stale volume (vectors from old embedder, no metadata)
+### C — Dev stale volume (old embedder, no metadata)
 
-Symptoms: retrieval quality wrong, no error.  
-Fix: wipe volume **or** run seed job (treats missing metadata as mismatch).
+Symptoms: wrong retrieval, no error.  
+Fix: wipe volume **or** run seed job.
 
 ### D — Qdrant unavailable mid-session (PR2+)
 
-Symptoms: interview already started; `submit_answer` continues; evaluator may run with `chunks == []` (degraded quality, no 503).  
-Fix: restore Qdrant service; **do not** re-seed unless manifest/embedder changed. Optional `EvaluatorAgent` ERROR log is safety net only — not a user-facing failure.
+Symptoms: `submit_answer` continues; evaluator may run with `chunks == []`.  
+Fix: restore Qdrant; **do not** re-seed unless manifest/embedder changed.
 
 ---
 
 ## Out of scope (v0.2)
 
-- `/ready` endpoint (Postgres + Qdrant ping) — future PR
+- `/ready` endpoint (Postgres + Qdrant ping)
 - Embedding sidecar / hosted API
-- fastembed migration without re-index (re-index is mandatory once)
+- fastembed migration without re-index
 - Admin HTTP seed endpoint
 - Incremental per-document seed updates
 
 ---
 
-## Agent pipeline (after this document)
+## Agent pipeline
 
 | Step | Agent | Deliverable | Status |
 |------|-------|-------------|--------|
-| 1 | `revisor-arquitetural-agent` | Validate module boundaries; P0/P1 ressalvas | **Done** — approved with reservations; plan updated |
-| 2 | `escritor-testes-agent` | PR0 tests (benchmark exit codes, golden schema, `test_seed_manifest` stub) | Pending |
-| 3 | `executor-codigo-agent` | PR0 implementation | Pending |
-| 4 | **Miller** | Run benchmark; GO/NO-GO | Pending |
-| 5+ | TDD cycle per PR | escritor-testes → executor → refatorador → revisor-codigo → condutor-testes | Pending |
+| 1 | `revisor-arquitetural-agent` | Module boundaries; P0/P1 ressalvas | **Done** |
+| 2 | `escritor-testes-agent` | PR0 tests | **Done** |
+| 3 | `executor-codigo-agent` | PR0 implementation | **Done** |
+| 4 | **Miller** | GO/NO-GO validation | **Done** — GO (M1 7/8) |
+| 5 | `escritor-testes-agent` | PR1 tests (TDD Red) | **Done** |
+| 6 | `executor-codigo-agent` | PR1 implementation | **Done** |
+| 7 | `refatorador-agent` / `revisor-codigo-agent` | PR1 review (optional) | Pending |
+| 8 | `escritor-testes-agent` | PR2 tests (TDD Red) | **Done** |
+| 9 | `executor-codigo-agent` | PR2 implementation | **Done** |
+| 10 | `revisor-codigo-agent` | PR2 review | **Done** |
+| 11 | `logs-agent` | PR2 operational log review | **Done** |
+| 12 | `executor-codigo-agent` | PR2 log/fix follow-ups | **Done** |
+| 13+ | PR3 cycle | Docker lean + size log | Pending |
 
-After PR2: consider `seguranca-agent`. After PR4: `documentacao-agent`.
+After PR4: `documentacao-agent` (formal closure).
 
 ---
 
 ## Global v0.2 checklist
 
-- [ ] PR0: benchmark GO documented
-- [ ] PR1: fastembed in prod; torch removed; golden CI 8/8
-- [ ] PR2: seed decoupled; manifest; `RAG_NOT_READY`; runbook
+- [x] PR0: GO documented; config SSOT; golden queries; unit tests
+- [x] PR1: fastembed in prod; torch removed; golden CI 8/8
+- [x] PR2: seed decoupled; manifest; `RAG_NOT_READY`; runbook; 14 tests; 128 passed
 - [ ] PR3: slim Docker; size logged
 - [ ] PR4: hard CI gates; `todo.md` updated
 
@@ -387,31 +403,34 @@ After PR2: consider `seguranca-agent`. After PR4: `documentacao-agent`.
 | `/ready` (~L64) | **Keep open** |
 | Priority #10 fastembed evaluate | Replace with “fastembed PR0–PR4” |
 
-See final plan section in agent transcripts for proposed `todo.md` diff text.
-
 ---
 
-## Current repo state (pre-implementation)
+## Current repo state
 
 | Component | Today | After v0.2 |
 |-----------|-------|------------|
-| `embeddings.py` | `SentenceTransformer` | fastembed |
-| Config SSOT | Duplicated constants (`_VECTOR_SIZE`, `_COLLECTION_NAME`) | Core `embedding_config` + domain `rag_config` |
-| `vector_store.py` | `ensure_collection`, `upsert`, `search` | + metadata, drop, `get_collection_info` |
-| `Dockerfile` | Single-stage, no `.dockerignore` | Multi-stage slim |
-| `docker-entrypoint.sh` | Always seeds Qdrant | Migrate + uvicorn only |
-| Seed job | Hardcoded domain import | `scripts/run_seed.py` via domain registry |
-| Integration RAG test | `len(chunks) > 0` | Golden top-1 doc ID |
-| CI | Seed step; no image gate | Golden + hard size + no-torch |
+| `embeddings.py` | fastembed (PR1 ✅) | fastembed |
+| Config SSOT | Core + domain split (PR0 ✅) | ✅ |
+| `vector_store.py` | `VECTOR_SIZE` + metadata/drop (PR1+PR2 ✅) | ✅ |
+| `rag_readiness.py` | `check_rag_ready` → `RAG_NOT_READY` on start (PR2 ✅) | ✅ |
+| `docker-entrypoint.sh` | Migrate + uvicorn only (PR2 ✅) | ✅ |
+| Seed job | `run_seed.py` + compose profile `seed` (PR2 ✅) | ✅ |
+| `Dockerfile` | Single-stage, no `.dockerignore` | Multi-stage slim (PR3) |
+| Integration RAG test | Golden 8/8 top-1 (PR1 ✅) | ✅ |
+| CI | Seed via `run_seed.py`; golden; no image gate | Golden + hard size + no-torch (PR4) |
 
 ---
 
-## Conversation trace (for context restart)
+## Conversation trace
 
-Planning flow used: `orquestrador-agent` → `planejador-agent` → `critico-agent` → `tradeoffs-agent` (Combo X) → `planejador-agent` (PR split + patches) → `critico-agent` (revalidation) → `planejador-agent` (final plan + `RAG_NOT_READY` + golden queries) → `revisor-arquitetural-agent` (P0/P1 incorporated into this doc).
+Planning: `orquestrador` → `planejador` → `critico` → `tradeoffs` (Combo X) → `planejador` → `critico` → `revisor-arquitetural` (P0/P1 incorporated).
 
-Key trade-off resolved: **Combo X** (monolithic fastembed path) over phased torch-CPU-first, because **650 MB CI gate** requires fastembed.
+Implementation: PR0 complete (GO). PR1 complete (fastembed swap, golden 8/8, torch removed). PR2 complete (seed decoupled, manifest, `RAG_NOT_READY`, 14 tests, 128 passed).
+
+Key trade-off: **Combo X** (monolithic fastembed) over torch-CPU-first, because **650 MB CI gate** requires fastembed.
+
+**Next:** PR3 (Docker lean + size log) → PR4 (CI hard gates + `todo.md` closure).
 
 ---
 
-*When implementation starts, update **Status** at the top and check off PR sections as merged.*
+*Update **Status** at the top and check off PR sections as merged.*
