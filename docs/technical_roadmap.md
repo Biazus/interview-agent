@@ -9,11 +9,11 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 
 ## Current architectural vision
 
-The project is a **FastAPI monolith** with clear layering (`api` → `services` → `repositories` → `agents`), multi-domain registration via `app/core/domain/registry.py` (currently only `async_messaging` in `app/domains/async_messaging/bootstrap.py`), Postgres persistence with useful constraints (`uq_interviews_candidate_active`, `uq_interview_turn_number` in `app/core/db/models.py`), RAG on Qdrant (`app/core/rag/`) with **fastembed** (ONNX) in-process embeddings (`app/core/rag/embeddings.py`, PR1), and LLM via Groq → OpenRouter fallback (`app/core/llm/fallback.py`).
+The project is a **FastAPI monolith** with clear layering (`api` → `services` → `repositories` → `agents`), multi-domain registration via `app/core/domain/registry.py` (currently only `async_messaging` in `app/domains/async_messaging/bootstrap.py`), Postgres persistence with useful constraints (`uq_interviews_candidate_active`, `uq_interview_turn_number` in `app/core/db/models.py`), RAG on Qdrant (`app/core/rag/`) with **fastembed** (ONNX) in-process embeddings (`app/core/rag/embeddings.py`), and LLM via Groq → OpenRouter fallback (`app/core/llm/fallback.py`).
 
 The critical `submit_answer` path in `InterviewService` is **synchronous per request**: evaluate with LLM + RAG, optionally generate report on the final turn, then persist. This is a deliberate trade-off (documented in `todo.md`).
 
-Singletons via `@lru_cache` (`get_llm_chain`, `get_embedding_provider`, `get_cached_domain`) make the API *almost* stateless for HTTP, but **stateful in-process** for the embedding model and Qdrant clients. The Docker entrypoint (`scripts/docker-entrypoint.sh`) runs **migrations + Uvicorn only** (PR2); Qdrant seed is a separate compose profile job (`scripts/run_seed.py`, ADR-005). `start_interview` fails fast with **`503 RAG_NOT_READY`** when the collection is empty or the manifest is stale (PR2).
+Singletons via `@lru_cache` (`get_llm_chain`, `get_embedding_provider`, `get_cached_domain`) make the API *almost* stateless for HTTP, but **stateful in-process** for the embedding model and Qdrant clients. The Docker entrypoint (`scripts/docker-entrypoint.sh`) runs **migrations + Uvicorn only**; Qdrant seed is a separate compose profile job (`scripts/run_seed.py`, ADR-005). `start_interview` fails fast with **`503 RAG_NOT_READY`** when the collection is empty or the manifest is stale. Production image is **~144 MB** (multi-stage build; CI hard gate at 650 MB).
 
 ### Strengths to preserve
 
@@ -25,7 +25,7 @@ Singletons via `@lru_cache` (`get_llm_chain`, `get_embedding_provider`, `get_cac
 | LLM resilience | Groq → OpenRouter with transient/permanent error classification                       |
 | Persistence    | Partial unique indexes, `DuplicateTurn` handling, nested savepoint for report races   |
 | Auth           | Argon2, opaque tokens with SHA-256 hash, no PII in logs                               |
-| Tests          | Unit + API + integration in CI (**128 passed**, 14 PR2); LLM fakes, transactional fixtures, integration with state rehydration |
+| Tests          | Unit + API + integration in CI; LLM fakes, transactional fixtures, integration with state rehydration |
 
 
 ---
@@ -37,11 +37,9 @@ Singletons via `@lru_cache` (`get_llm_chain`, `get_embedding_provider`, `get_cac
 
 | Bottleneck                          | Location                                                                         | Why it limits scale                                                                                                                   |
 | ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Embeddings in API process | `EmbeddingProvider`, `Dockerfile` | fastembed in-process (PR1 ✅); image still large until PR3 slim build; thread-pool contention (`asyncio.to_thread` in `EvaluatorAgent`) |
+| Embeddings in API process | `EmbeddingProvider`, `Dockerfile` | fastembed in-process; thread-pool contention (`asyncio.to_thread` in `EvaluatorAgent`) under high concurrency |
 | LLM on critical HTTP path           | `InterviewService.submit_answer` → `OrchestratorAgent`                           | High P95 latency (RAG + evaluate + report); no backpressure; token cost on retry/duplicate                                            |
 | Fragile evaluator parsing           | `EvaluatorAgent._parse_response()` vs `ReportingAgent` + `generate_structured()` | Intermittent failures → `503 LLM_UNAVAILABLE`; architectural inconsistency between agents                                             |
-| ~~Qdrant seed on every boot~~       | ~~`docker-entrypoint.sh`~~ → **`run_seed.py` + compose profile `seed`** (PR2 ✅) | Resolved: API restart skips re-embed when manifest matches; operator runs seed job explicitly                                         |
-| RAG silent failure on start         | ~~Empty retrieval without error~~ → **`RAG_NOT_READY` (503) on `start_interview`** (PR2 ✅) | Fail-fast before session; `submit_answer` may degrade mid-session without 503                          |
 | Health without readiness            | `app/api/main.py` `/health`                                                      | Orchestrator marks pod healthy when Postgres/Qdrant is down                                                                           |
 | No queue/workers                    | Everything in Uvicorn                                                            | Cannot decouple LLM spikes from HTTP throughput; no DLQ for failed reports                                                            |
 | Partial idempotency                 | DB constraints + LLM before commit                                               | `DuplicateTurn` protects turn integrity, but duplicate submit already spent tokens                                                    |
@@ -64,12 +62,10 @@ Singletons via `@lru_cache` (`get_llm_chain`, `get_embedding_provider`, `get_cac
 | #   | Initiative                              | Problem                                                   | Approach                                                                    | Effort     |
 | --- | --------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------- | ---------- |
 | 1   | **Liveness vs readiness**               | `/health` returns OK without dependency checks            | `/health` (liveness) + `/ready` with Postgres + Qdrant ping                 | Low        |
-| 2   | **Decouple Qdrant seed from API boot**  | ~~Seed runs on every start~~                                   | **Done (PR2)** — manifest hash + `docker compose --profile seed run --rm seed`; entrypoint migrate-only | ~~Low~~ **Done** |
-| 3   | **Lean Docker image**                   | ~8.54 GB image (torch removed PR1; build still single-stage)   | Multi-stage build; `.dockerignore`; size log (PR3); hard 650 MB gate (PR4)                                | Low        |
-| 4   | **Structured output in evaluator**      | Text parsing (`NIVEL:`/`FEEDBACK:`) vs JSON in reporter   | Pydantic schema + `generate_structured()` (mirror `reporting_schema.py`)    | High       |
-| 5   | **Idempotency-Key on submit**           | Client retry after timeout wastes LLM tokens              | HTTP header → `idempotent_requests` table (key, response, TTL 24h)          | Medium     |
-| 6   | **Payload limits + basic cost logging** | No `max_length` on answers; tokens not structured in logs | Schema limits (4–8 KB); log `tokens_used` from `LLMResponse`                | Low        |
-| 7   | **Test hardening**                      | Alembic drift, missing security API tests                 | Alembic in fixtures; ownership 404, report retry, duplicate turn tests      | Low–Medium |
+| 2   | **Structured output in evaluator**      | Text parsing (`NIVEL:`/`FEEDBACK:`) vs JSON in reporter   | Pydantic schema + `generate_structured()` (mirror `reporting_schema.py`)    | High       |
+| 3   | **Idempotency-Key on submit**           | Client retry after timeout wastes LLM tokens              | HTTP header → `idempotent_requests` table (key, response, TTL 24h)          | Medium     |
+| 4   | **Payload limits + basic cost logging** | No `max_length` on answers; tokens not structured in logs | Schema limits (4–8 KB); log `tokens_used` from `LLMResponse`                | Low        |
+| 5   | **Test hardening**                      | Alembic drift, missing security API tests                 | Alembic in fixtures; ownership 404, report retry, duplicate turn tests      | Low–Medium |
 
 
 **Target outcome:** Reliable single-replica deploy, stable LLM pipeline, safe public exposure.
@@ -126,7 +122,7 @@ Singletons via `@lru_cache` (`get_llm_chain`, `get_embedding_provider`, `get_cac
 | ADR-002 | Sync vs async LLM     | Sync until frontend ships; queue when P95 exceeds SLA  | Aggressive timeout only                     |
 | ADR-003 | Unified LLM contract  | Pydantic structured output for evaluate **and** report | Tool calling; few-shot text parsing         |
 | ADR-004 | Submit idempotency    | `Idempotency-Key` HTTP + Postgres table                | DB constraints only (`DuplicateTurn`)       |
-| ADR-005 | Qdrant seed strategy  | **Implemented (PR2)** — init job + manifest hash; see [ADR-005](./adr/ADR-005-qdrant-seed-strategy.md) | Conditional seed in entrypoint              |
+| ADR-005 | Qdrant seed strategy  | Init job + manifest hash; see [ADR-005](./adr/ADR-005-qdrant-seed-strategy.md) | Conditional seed in entrypoint              |
 | ADR-006 | Observability stack   | OpenTelemetry + JSON structured logs                   | Extra log fields only (interim)             |
 | ADR-007 | Multi-tenant model    | `tenant_id` + Postgres RLS when B2B                    | Schema per tenant; single-tenant per deploy |
 | ADR-008 | Candidate feedback    | Keep hidden (current) or expose level only             | Full real-time feedback                     |
@@ -160,7 +156,7 @@ Singletons via `@lru_cache` (`get_llm_chain`, `get_embedding_provider`, `get_cac
 
 | Priority | Feature                                               | Technical dependency               | Value                            |
 | -------- | ----------------------------------------------------- | ---------------------------------- | -------------------------------- |
-| **P0**   | Deploy hardening (image slim PR3/4, readiness, seed decoupled ✅ PR2) | ADR-005 (implemented)              | Reliable operations              |
+| **P0**   | Readiness endpoint (`/ready`)                         | Postgres + Qdrant ping             | Reliable operations              |
 | **P0**   | Structured evaluate + payload limits                  | ADR-003                            | LLM stability                    |
 | **P1**   | Candidate frontend (auth, interview flow, report)     | CORS, idempotency (ADR-004)        | Usable product                   |
 | **P1**   | Second domain (e.g. Kafka)                            | Domain plugin + ingestion pipeline | Validates multi-domain registry  |
@@ -248,12 +244,12 @@ flowchart TB
 
 | Dimension           | Current state                                                       | Recommended direction                                               |
 | ------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Horizontal scale    | fastembed in-process (PR1); seed decoupled (PR2 ✅); image slim pending PR3 | Stateless API + embedding sidecar at 2+ replicas |
+| Horizontal scale    | fastembed in-process; lean image (~144 MB); seed decoupled via init job | Stateless API + embedding sidecar at 2+ replicas |
 | Distributed systems | Monolith; strong Postgres consistency                               | Queue for evaluate/report; eventual feedback; multi-tenant with RLS |
 | Concurrency / locks | Good: partial unique index + `DuplicateTurn`                        | + `Idempotency-Key`; explicit optimistic lock on turn               |
 | Resilience          | LLM provider fallback; report retry via GET                         | Circuit breaker; DLQ; degrade to "evaluation pending"               |
 | LLM pipeline        | Split evaluate (text) vs report (JSON)                              | Unified structured output; model routing; token metrics             |
-| RAG / embeddings    | fastembed in-process (PR1); manifest + fail-fast start (PR2); sync thread pool | Sidecar or hosted API at scale; cache; warm pool                          |
+| RAG / embeddings    | fastembed in-process; manifest + fail-fast start; sync thread pool | Sidecar or hosted API at scale; cache; warm pool                          |
 | Observability       | Text logs with `interview_extra`                                    | JSON + traces + SLOs on submit/report                               |
 | Functional roadmap  | 1 domain, API-only                                                  | Frontend → 2nd domain → B2B → A2A                                   |
 
