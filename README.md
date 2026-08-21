@@ -218,6 +218,5 @@ New domains (Kafka, RabbitMQ, etc.) can be added by implementing the three inter
 
 ## Further reading
 
-- [CHANGELOG.md](CHANGELOG.md) — release history
 - [docs/current_plan.md](docs/current_plan.md) — PR2 seed job, manifest, and `RAG_NOT_READY` runbook
 - [docs/todo.md](docs/todo.md) — dependency audit and follow-up backlog
