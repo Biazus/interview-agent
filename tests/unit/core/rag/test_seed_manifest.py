@@ -6,7 +6,7 @@ from app.domains.async_messaging import rag_config
 
 MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"
 EXPECTED_SEED_MANIFEST_HASH = (
-    "da597b29b7026402c373778f40d82a179a773e8b974701517c4ff008f61e197c"
+    "460b078cc667f5305ae79d8bda8d3d762c829bbc491572bfa269feeb136fb598"
 )
 
 

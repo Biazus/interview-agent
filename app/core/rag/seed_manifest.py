@@ -27,7 +27,8 @@ def compute_manifest_hash(
     parts: list[str] = []
     for path in sorted(files):
         resolved_path = _resolve_manifest_path(path, root)
-        file_bytes = resolved_path.read_bytes()
+        # Normalize CRLF so manifest hash matches git (eol=lf) on all platforms.
+        file_bytes = resolved_path.read_bytes().replace(b"\r\n", b"\n")
         file_hash = hashlib.sha256(file_bytes).hexdigest()
         parts.append(f"{path}:{file_hash}")
     parts.append(f"model:{model_id}")
