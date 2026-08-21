@@ -30,7 +30,7 @@ A central **registry** wires domains at startup. The orchestrator picks a domain
 
 ## Quick start (Docker)
 
-The API runs in Docker by default. On container start the entrypoint waits for Qdrant, applies migrations, seeds the vector store, then starts Uvicorn.
+The API runs in Docker by default. On container start the entrypoint waits for Qdrant, applies migrations, then starts Uvicorn. **Qdrant seed is a separate one-off job** — run it before the first interview (see below).
 
 ### 1. Configure environment
 
@@ -39,15 +39,21 @@ cp .env.example .env
 # Edit .env — set GROQ_API_KEY and OPENROUTER_API_KEY
 ```
 
-### 2. Start the stack
+### 2. First boot (Postgres, Qdrant, seed, API)
 
 ```bash
-docker compose up -d
+docker compose up -d postgres vector-db
+docker compose --profile seed run --rm seed
+docker compose up -d api
 ```
+
+The seed job loads domain knowledge into Qdrant (embeddings may take a minute on first run). Data persists in the `qdrant_data` volume — you only need to re-run seed after embedder or manifest changes (see [docs/current_plan.md](docs/current_plan.md) PR2 runbook).
+
+**Later restarts** (volumes intact): `docker compose up -d` is enough.
 
 OpenAPI docs: http://localhost:8000/docs
 
-Logs: `docker compose logs -f api` (first start may take a minute while embeddings load).
+Logs: `docker compose logs -f api`
 
 ### What runs automatically
 
@@ -55,10 +61,10 @@ Logs: `docker compose logs -f api` (first start may take a minute while embeddin
 |------|--------|
 | Postgres + Qdrant | `docker compose` services |
 | `alembic upgrade head` | API container entrypoint |
-| Qdrant seed (RAG) | API container entrypoint |
+| Qdrant seed (RAG) | One-off `seed` service (`docker compose --profile seed run --rm seed`) |
 | Uvicorn on `:8000` | API container entrypoint |
 
-You do **not** need to run migrations, seed Qdrant, or start Uvicorn manually when using Docker.
+You do **not** need to run migrations or start Uvicorn manually when using Docker. You **do** need to run the seed job once before starting interviews (or after RAG data changes). `POST /interviews` returns **503** `RAG_NOT_READY` if Qdrant is empty or stale.
 
 ## Local tooling (uv)
 
@@ -70,9 +76,11 @@ uv sync --group dev
 
 Use this when running pytest or ruff on the host. The test database `interview_agent_test` is created by [scripts/init-databases.sql](scripts/init-databases.sql); schema is applied by pytest fixtures in [tests/conftest.py](tests/conftest.py).
 
-**Integration tests** need Qdrant with seed data. Easiest path: start the full stack once (`docker compose up -d`) so the API entrypoint seeds Qdrant (data persists in the `qdrant_data` volume). Then run tests against `localhost:6333`:
+**Integration tests** need Qdrant with seed data. Start Postgres and Qdrant, run the seed job, then run tests against `localhost:6333`:
 
 ```bash
+docker compose up -d postgres vector-db
+docker compose --profile seed run --rm seed   # or: uv run python scripts/run_seed.py
 uv run pytest tests/integration
 ```
 
@@ -80,6 +88,7 @@ Or run the full suite:
 
 ```bash
 docker compose up -d postgres vector-db   # if not already running
+docker compose --profile seed run --rm seed
 uv run pytest
 ```
 
@@ -125,6 +134,7 @@ Protected routes expect `Authorization: Bearer <token>`.
 | `INTERVIEW_NOT_FINISHED` | 409 | Report requested before interview ends |
 | `INVALID_DOMAIN` / `INVALID_TOPIC` | 400 | Unknown domain or topic |
 | `EMPTY_ANSWER` | 422 | Blank answer |
+| `RAG_NOT_READY` | 503 | Qdrant empty or seed manifest stale on `POST /interviews` |
 | `LLM_UNAVAILABLE` | 503 | All LLM providers failed |
 
 ## Environment variables
@@ -147,7 +157,8 @@ Prerequisites: [uv](https://docs.astral.sh/uv/) on the host and Docker for Postg
 
 ```bash
 uv sync --group dev
-docker compose up -d          # API seeds Qdrant on first start; data persists in volumes
+docker compose up -d postgres vector-db
+docker compose --profile seed run --rm seed   # or: uv run python scripts/run_seed.py
 ```
 
 ```bash
@@ -157,7 +168,7 @@ uv run pytest tests/unit
 # API tests (Postgres — interview_agent_test)
 uv run pytest tests/api
 
-# Integration tests (Qdrant on localhost:6333 — seeded by API container)
+# Integration tests (Qdrant on localhost:6333 — seed via run_seed.py)
 uv run pytest tests/integration
 
 # Full suite
@@ -170,7 +181,8 @@ CI runs the same suites with Postgres and Qdrant service containers (see [.githu
 
 | Service | Port | Notes |
 |---------|------|-------|
-| `api` | 8000 | Waits for Qdrant, migrations, seed, then Uvicorn |
+| `api` | 8000 | Waits for Qdrant, migrations, then Uvicorn |
+| `seed` | — | One-off RAG ingest (`profiles: ["seed"]`) — runs `scripts/run_seed.py` |
 | `postgres` | 5432 | Postgres 16, user/db `interview` |
 | `vector-db` | 6333 | Qdrant |
 | `localstack` | 4566 | Optional (`--profile messaging`) — SQS/SNS/Lambda for future use |
@@ -205,4 +217,5 @@ New domains (Kafka, RabbitMQ, etc.) can be added by implementing the three inter
 ## Further reading
 
 - [CHANGELOG.md](CHANGELOG.md) — release history
+- [docs/current_plan.md](docs/current_plan.md) — PR2 seed job, manifest, and `RAG_NOT_READY` runbook
 - [docs/todo.md](docs/todo.md) — dependency audit and follow-up backlog

@@ -81,7 +81,15 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
     _wait_for_qdrant()
 
-    for domain_value in list_registered_domains():
+    domains = list_registered_domains()
+    if not domains:
+        logger.error(
+            "No registered domains to seed; ensure app.bootstrap registers domains",
+            extra={"reason": "empty_registry"},
+        )
+        sys.exit(1)
+
+    for domain_value in domains:
         logger.info("Seeding domain: %s", domain_value)
         ingestion_module = importlib.import_module(
             f"app.domains.{domain_value}.rag_ingestion"

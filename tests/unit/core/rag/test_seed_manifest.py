@@ -1,8 +1,13 @@
 import pytest
 
+from app.core.rag.embedding_config import EMBEDDING_MODEL_ID
 from app.core.rag.seed_manifest import compute_manifest_hash
+from app.domains.async_messaging import rag_config
 
 MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"
+EXPECTED_SEED_MANIFEST_HASH = (
+    "da597b29b7026402c373778f40d82a179a773e8b974701517c4ff008f61e197c"
+)
 
 
 @pytest.fixture
@@ -61,3 +66,21 @@ def test_compute_manifest_hash_returns_sha256_hex(seed_files):
     assert len(manifest_hash) == 64
     assert manifest_hash.isalnum()
     assert manifest_hash == manifest_hash.lower()
+
+
+def test_compute_manifest_hash_is_independent_of_cwd(tmp_path, monkeypatch):
+    files = rag_config.SEED_MANIFEST_FILES
+    hash_at_repo_root = compute_manifest_hash(files, EMBEDDING_MODEL_ID)
+
+    monkeypatch.chdir(tmp_path)
+    hash_from_other_cwd = compute_manifest_hash(files, EMBEDDING_MODEL_ID)
+
+    assert hash_from_other_cwd == hash_at_repo_root
+
+
+def test_compute_manifest_hash_seed_files_regression():
+    manifest_hash = compute_manifest_hash(
+        rag_config.SEED_MANIFEST_FILES, EMBEDDING_MODEL_ID
+    )
+
+    assert manifest_hash == EXPECTED_SEED_MANIFEST_HASH
