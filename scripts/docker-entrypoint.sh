@@ -5,15 +5,7 @@ export QDRANT_HOST="${QDRANT_HOST:-vector-db}"
 export QDRANT_PORT="${QDRANT_PORT:-6333}"
 
 echo "Waiting for Qdrant at ${QDRANT_HOST}:${QDRANT_PORT}..."
-until uv run python -c "
-from qdrant_client import QdrantClient
-import os
-host = os.environ['QDRANT_HOST']
-port = int(os.environ['QDRANT_PORT'])
-QdrantClient(host=host, port=port).get_collections()
-" 2>/dev/null; do
-  sleep 2
-done
+uv run python -c "from app.core.rag.qdrant_wait import wait_for_qdrant; wait_for_qdrant()"
 
 echo "Applying database migrations..."
 uv run alembic upgrade head
