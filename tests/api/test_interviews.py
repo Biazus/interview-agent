@@ -4,6 +4,7 @@ from uuid import UUID
 import pytest
 from httpx import AsyncClient
 
+from app.core.constants import MAX_ANSWER_LENGTH
 from tests.fakes.llm import DeterministicLLM, FailingEvaluationLLM
 
 _START_PAYLOAD = {
@@ -140,6 +141,34 @@ async def test_empty_answer_returns_422(interview_client: AsyncClient):
 
     assert response.status_code == 422
     assert response.json()["code"] == "EMPTY_ANSWER"
+
+
+@pytest.mark.asyncio
+async def test_whitespace_only_answer_returns_422(interview_client: AsyncClient):
+    interview_id = await _start_interview(interview_client)
+
+    response = await interview_client.post(
+        f"/interviews/{interview_id}/answers",
+        json={"answer": "   "},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "EMPTY_ANSWER"
+
+
+@pytest.mark.asyncio
+async def test_answer_too_long_returns_422(interview_client: AsyncClient):
+    interview_id = await _start_interview(interview_client)
+
+    response = await interview_client.post(
+        f"/interviews/{interview_id}/answers",
+        json={"answer": "x" * (MAX_ANSWER_LENGTH + 1)},
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "ANSWER_TOO_LONG"
+    assert str(MAX_ANSWER_LENGTH) in body["detail"]
 
 
 @pytest.mark.asyncio

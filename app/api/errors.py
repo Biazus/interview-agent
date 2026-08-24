@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from app.core.exceptions import (
     ActiveInterviewExists,
     AppError,
+    AnswerTooLong,
     DomainRequired,
     DuplicateTurn,
     EmailAlreadyRegistered,
@@ -24,6 +25,7 @@ from app.core.exceptions import (
 
 _APP_ERROR_STATUS: dict[type[AppError], int] = {
     ActiveInterviewExists: 409,
+    AnswerTooLong: 422,
     InterviewNotFound: 404,
     NoActiveInterview: 404,
     InterviewAlreadyFinished: 409,
@@ -76,15 +78,26 @@ def register_error_handlers(app: FastAPI) -> None:
         _request: Request, exc: RequestValidationError
     ) -> JSONResponse:
         for error in exc.errors():
-            loc = error.get("loc", ())
-            if loc == ("body", "answer"):
-                return JSONResponse(
-                    status_code=422,
-                    content={
-                        "detail": "A resposta não pode ser vazia.",
-                        "code": "EMPTY_ANSWER",
-                    },
-                )
+            if error.get("loc") != ("body", "answer"):
+                continue
+
+            match error.get("type"):
+                case "string_too_long":
+                    return JSONResponse(
+                        status_code=422,
+                        content={
+                            "detail": AnswerTooLong.message,
+                            "code": AnswerTooLong.code,
+                        },
+                    )
+                case "string_too_short" | "missing":
+                    return JSONResponse(
+                        status_code=422,
+                        content={
+                            "detail": EmptyAnswer.message,
+                            "code": EmptyAnswer.code,
+                        },
+                    )
 
         return JSONResponse(
             status_code=400,

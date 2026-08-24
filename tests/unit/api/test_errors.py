@@ -5,7 +5,9 @@ from httpx import ASGITransport, AsyncClient
 pytest.importorskip("app.api.errors", reason="Fase 1 pendente: app.api.errors")
 
 from app.api.errors import APIError, register_error_handlers  # noqa: E402
-from app.core.exceptions import InvalidDomain  # noqa: E402
+from app.api.schemas.interviews import SubmitAnswerRequest  # noqa: E402
+from app.core.constants import MAX_ANSWER_LENGTH  # noqa: E402
+from app.core.exceptions import AnswerTooLong, EmptyAnswer, InvalidDomain  # noqa: E402
 
 
 def test_api_error_exposes_status_detail_and_code():
@@ -61,4 +63,67 @@ async def test_app_error_handler_maps_domain_exceptions():
     assert response.json() == {
         "detail": "Domínio inválido.",
         "code": "INVALID_DOMAIN",
+    }
+
+
+@pytest.mark.asyncio
+async def test_validation_error_handler_maps_empty_answer():
+    app = FastAPI()
+    register_error_handlers(app)
+
+    @app.post("/answers")
+    def submit_answer(body: SubmitAnswerRequest):
+        return body
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/answers", json={"answer": ""})
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": EmptyAnswer.message,
+        "code": EmptyAnswer.code,
+    }
+
+
+@pytest.mark.asyncio
+async def test_validation_error_handler_maps_answer_too_long():
+    app = FastAPI()
+    register_error_handlers(app)
+
+    @app.post("/answers")
+    def submit_answer(body: SubmitAnswerRequest):
+        return body
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/answers",
+            json={"answer": "x" * (MAX_ANSWER_LENGTH + 1)},
+        )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": AnswerTooLong.message,
+        "code": AnswerTooLong.code,
+    }
+
+
+@pytest.mark.asyncio
+async def test_validation_error_handler_maps_missing_answer():
+    app = FastAPI()
+    register_error_handlers(app)
+
+    @app.post("/answers")
+    def submit_answer(body: SubmitAnswerRequest):
+        return body
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/answers", json={})
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": EmptyAnswer.message,
+        "code": EmptyAnswer.code,
     }
