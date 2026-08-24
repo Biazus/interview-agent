@@ -135,7 +135,8 @@ Protected routes expect `Authorization: Bearer <token>`.
 | `INTERVIEW_ALREADY_FINISHED` | 409 | Submit on finished interview |
 | `INTERVIEW_NOT_FINISHED` | 409 | Report requested before interview ends |
 | `INVALID_DOMAIN` / `INVALID_TOPIC` | 400 | Unknown domain or topic |
-| `EMPTY_ANSWER` | 422 | Blank answer |
+| `EMPTY_ANSWER` | 422 | Blank or whitespace-only answer |
+| `ANSWER_TOO_LONG` | 422 | Answer exceeds 4096 characters |
 | `RAG_NOT_READY` | 503 | Qdrant empty or seed manifest stale on `POST /interviews` |
 | `LLM_UNAVAILABLE` | 503 | All LLM providers failed |
 

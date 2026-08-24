@@ -1,7 +1,6 @@
 # Product Roadmap — interview-agent
 
-Strategic product direction for **interview-agent** (~v0.1.0).  
-Derived from **roadmap-produto-agent** analysis (Aug 2026) and product decisions by Miller.
+Strategic product direction for **interview-agent** (~v0.1.0). Last updated Aug 2026.
 
 For engineering execution, see [`technical_roadmap.md`](./technical_roadmap.md).  
 For tactical debt and checkboxes, see [`todo.md`](./todo.md).
