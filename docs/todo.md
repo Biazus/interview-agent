@@ -179,7 +179,7 @@ Root cause: `sentence-transformers` → `torch 2.13` resolves the **full CUDA 13
 
 - [x] **[Medium]** `qdrant/qdrant:latest` in compose and CI — non-reproducible builds.  
   **Recommendation:** Pin to a specific Qdrant version tag.  
-  **Progress:** **Done PR4** — pinned to `qdrant/qdrant:v1.12.5` in compose and CI.
+  **Progress:** — pinned to `qdrant/qdrant:v1.19.0` in compose and CI (aligned with `qdrant-client>=1.19.0`).
 
 - [ ] **[Info]** Pre-commit runs full pytest (`always_run: true` in `.pre-commit-config.yaml`) — slow commits.  
   **Recommendation:** Keep ruff in hook; run pytest only in CI.
