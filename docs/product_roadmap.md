@@ -55,7 +55,7 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 | Embeddings | **fastembed** (ONNX) in-process |
 | RAG seed | Decoupled job (`run_seed.py` + compose profile `seed`); manifest hash |
 | RAG readiness | **`503 RAG_NOT_READY`** on `start_interview` when empty/stale |
-| Deploy | Docker Compose; multi-stage image **~144 MB** (CI gate 650 MB); Qdrant pinned `v1.12.5` |
+| Deploy | Docker Compose; multi-stage image **~144 MB** (CI gate 650 MB); Qdrant pinned `v1.19.0` |
 | Tests | Unit + API + integration in CI |
 
 ### Validated vs assumed

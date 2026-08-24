@@ -68,6 +68,21 @@ async def test_protected_route_without_token_returns_401(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_password_validation(client: AsyncClient):
+    payload = {"email": "test@candidato.com", "password": "good-password-123"}
+    response = await client.post("/auth/register", json=payload)
+    assert response.status_code == 201
+    payload = {"email": "test@candidato.com", "password": "123"}
+    response = await client.post("/auth/register", json=payload)
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Dados inválidos na requisição."
+    payload = {"email": "test@candidato.com", "password": "good-password-123" * 10}
+    response = await client.post("/auth/register", json=payload)
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Dados inválidos na requisição."
+
+
+@pytest.mark.asyncio
 async def test_protected_route_with_invalid_token_returns_401(client: AsyncClient):
     response = await client.get(
         "/interviews/active",
