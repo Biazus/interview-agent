@@ -42,7 +42,7 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 
 ---
 
-## Current state (v0.1.0 → v0.2 in progress)
+## Current state (v0.2 shipped — v0.3 next)
 
 ### What exists
 
@@ -52,11 +52,11 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 | Domains | 1 (`async_messaging`): 5 topics, 35 questions, 12 RAG documents |
 | Agents | Orchestrator + Evaluator (text parse) + Reporting (structured output) |
 | UX | OpenAPI / curl only — **no frontend** |
-| Embeddings | **fastembed** (ONNX) in-process — PR1 ✅ |
-| RAG seed | Decoupled job (`run_seed.py` + compose profile `seed`); manifest hash — PR2 ✅ |
-| RAG readiness | **`503 RAG_NOT_READY`** on `start_interview` when empty/stale — PR2 ✅ |
-| Deploy | Docker Compose; image still ~8.5 GB (slim build PR3); cold start faster on restart after seed skip |
-| Tests | Unit + API + integration in CI — **128 passed** (14 PR2 tests) |
+| Embeddings | **fastembed** (ONNX) in-process |
+| RAG seed | Decoupled job (`run_seed.py` + compose profile `seed`); manifest hash |
+| RAG readiness | **`503 RAG_NOT_READY`** on `start_interview` when empty/stale |
+| Deploy | Docker Compose; multi-stage image **~144 MB** (CI gate 650 MB); Qdrant pinned `v1.12.5` |
+| Tests | Unit + API + integration in CI |
 
 ### Validated vs assumed
 
@@ -88,11 +88,11 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 
 | Item | Product value |
 |------|---------------|
-| Docker lean image + faster cold start | Shareable deploy; less friction for demos and early users |
 | Reliable evaluator (structured output) | Sessions complete without `503` mid-interview |
 | Answer payload limits | Safe public exposure before frontend |
 | Question randomization | Less repetitive practice sessions |
 | CORS + basic rate limiting | Required for separate frontend deploy (cross-origin API calls) |
+| Readiness endpoint (`/ready`) | Orchestrators detect Postgres/Qdrant outages |
 
 ### Do next — high impact, higher effort
 
@@ -126,28 +126,25 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 
 ---
 
-### v0.2 — Reliable enough to demo *(in progress — PR2 done, PR3/PR4 pending)*
+### v0.2 — Reliable enough to demo *(shipped — remaining polish below)*
 
 **Theme:** remove friction and failure modes before investing heavily in UI and content.
 
-| Deliverable | Product outcome | Status |
-|-------------|-----------------|--------|
-| fastembed production swap (remove torch) | Smaller deps; comparable retrieval | ✅ PR1 |
-| Decoupled Qdrant seed + manifest | Predictable startup; skip re-embed on restart | ✅ PR2 |
-| `RAG_NOT_READY` fail-fast on start | No silent empty-RAG sessions | ✅ PR2 |
-| Lean Docker image (multi-stage, `.dockerignore`) | Hostable without 8 GB pulls | PR3 |
-| Structured output in Evaluator | Fewer abandoned sessions | Open |
-| `max_length` on answers/passwords | Safe to expose | Open |
-| Question randomization | Practice feels less scripted | Open |
-| CORS (prep for React) | Frontend can call API from browser | Open |
+| Deliverable | Product outcome |
+|-------------|-----------------|
+| Structured output in Evaluator | Fewer abandoned sessions |
+| `max_length` on answers/passwords | Safe to expose |
+| Question randomization | Practice feels less scripted |
+| CORS (prep for React) | Frontend can call API from browser |
+| Readiness endpoint (`/ready`) | Host detects dependency failures |
 
 **North star:** *"I can host this and complete 10 interviews in a row without a 503."*
 
 **Suggested metrics**
 
 - 10 consecutive interviews without LLM failure  
-- Cold start under 30s *(improves on API restart after PR2 seed skip; full image slim PR3)*  
-- Image under ~2 GB *(hard 650 MB CI gate PR4)*  
+- Cold start under 30s on API restart (seed skip when manifest matches)  
+- Image under 650 MB *(achieved — ~144 MB)*
 
 ---
 
@@ -274,7 +271,7 @@ Ordered by how much they block a candidate today:
 
 1. **No frontend** — primary blocker for v0.3  
 2. **Evaluator reliability** — parse failures abort sessions  
-3. **Deploy friction** — image still large until PR3; cold start improved on restart (PR2 seed skip) but first boot needs seed job  
+3. **First-boot seed job** — operator must run `docker compose --profile seed` once (documented; not self-service for non-technical hosts)  
 4. **Question repetition** — deterministic first question per topic  
 5. **Finite content** — 35 questions; power users exhaust variety quickly  
 6. **No public hardening** — rate limits needed when React ships  
