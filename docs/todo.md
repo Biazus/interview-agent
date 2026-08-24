@@ -45,10 +45,6 @@ Severity: **Critical** · **High** · **Medium** · **Low** · **Info**
 
 ## Tests
 
-- [ ] **[High]** `tests/conftest.py` uses `Base.metadata.create_all`, not Alembic migrations.  
-  **Impact:** Schema drift between migrations and tests; production-only bugs.  
-  **Recommendation:** Run `alembic upgrade head` in test fixtures.
-
 - [ ] **[High]** README documents `404 INTERVIEW_NOT_FOUND` for cross-candidate access, but no API test covers it.  
   **Impact:** Silent IDOR regression if query logic changes.  
   **Recommendation:** Add API test with two authenticated candidates.
@@ -154,6 +150,7 @@ Severity: **Critical** · **High** · **Medium** · **Low** · **Info**
 - `httpx` in dev only — correct; runtime receives it transitively via `qdrant-client` and `openai`.
 - API / persistence stack (`fastapi`, `sqlalchemy`, `asyncpg`, `alembic`, `argon2-cffi`, `email-validator`, `pydantic-settings`) — appropriate for v1.
 - `submit_answer` calls LLM before persisting — correct to avoid invalid turns; rare DB failure after LLM implies token cost (accepted trade-off).
+- `tests/conftest.py` uses `Base.metadata.create_all` instead of `alembic upgrade head` — acceptable while models and migrations stay in sync (single migration today); drift risk revisited when schema changes become non-trivial (partial indexes, data migrations). Optional future: smoke `alembic upgrade head` step in CI.
 
 ---
 
@@ -165,6 +162,5 @@ Severity: **Critical** · **High** · **Medium** · **Low** · **Info**
 | 2 | Readiness check (Postgres + Qdrant) | High | Low | Open |
 | 3 | API tests: ownership 404, report retry, duplicate turn | High | Low | Open |
 | 4 | Move `pytest` to dev; remove dead deps | High | Low | Open |
-| 5 | Alembic-based test fixtures | High | Medium | Open |
-| 6 | Token purge + optional logout | High | Medium | Open |
-| 7 | JSON logging + request ID + LLM token metrics | Low | Medium | Open |
+| 5 | Token purge + optional logout | High | Medium | Open |
+| 6 | JSON logging + request ID + LLM token metrics | Low | Medium | Open |
