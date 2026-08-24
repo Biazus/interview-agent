@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -12,8 +13,12 @@ from app.core.llm.exceptions import (
     ProviderUnavailableError,
     RateLimitError,
 )
+from app.core.logging import llm_extra
 from app.core.llm.interfaces import LLMResponse
 from app.core.llm.requests import ChatRequest, GenerateRequest, StreamRequest
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -77,11 +82,16 @@ class ChatCompletionsAdapter(ABC):
 
     def _to_llm_response(self, response: Any) -> LLMResponse:
         text = response.choices[0].message.content or ""
+        tokens_used = response.usage.total_tokens if response.usage else None
+        logger.info(
+            "LLM tokens used",
+            extra=llm_extra(tokens_used, self.name, response.model),
+        )
         return LLMResponse(
             text=text,
             provider=self.name,
             model=response.model,
-            tokens_used=response.usage.total_tokens if response.usage else None,
+            tokens_used=tokens_used,
         )
 
     async def _iter_stream_deltas(self, stream: Any) -> AsyncIterator[str]:

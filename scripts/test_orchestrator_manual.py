@@ -10,6 +10,10 @@ from app.core.llm.fallback import FallbackLLMProvider
 from app.core.llm.providers.groq_provider import GroqProvider
 from app.core.llm.providers.openrouter_provider import OpenRouterProvider
 
+from app.core.logging import configure_logging
+
+configure_logging("INFO")
+
 # Respostas fixas propositalmente fracas, para forçar o NaiveSelector a
 # tentar trocar de tópico. Como só há um tópico populado hoje, isso deve
 # encerrar a entrevista antes de esgotar as respostas ... comportamento

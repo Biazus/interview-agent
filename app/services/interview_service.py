@@ -276,6 +276,9 @@ class InterviewService:
                 finished=new_state.finished,
                 evaluation_level=evaluation.level,
                 topic=evaluation.topic,
+                tokens_used=evaluation.raw_response.tokens_used,
+                provider=evaluation.raw_response.provider,
+                model=evaluation.raw_response.model,
             ),
         )
 
