@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from app.core.constants import MAX_ANSWER_LENGTH
+
 
 class StartInterviewRequest(BaseModel):
     domain: str
@@ -8,7 +10,7 @@ class StartInterviewRequest(BaseModel):
 
 
 class SubmitAnswerRequest(BaseModel):
-    answer: str = Field(min_length=1)
+    answer: str = Field(min_length=1, max_length=MAX_ANSWER_LENGTH)
 
 
 class CurrentQuestionResponse(BaseModel):

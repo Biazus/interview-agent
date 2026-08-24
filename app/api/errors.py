@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from app.core.exceptions import (
     ActiveInterviewExists,
     AppError,
+    AnswerTooLong,
     DomainRequired,
     DuplicateTurn,
     EmailAlreadyRegistered,
@@ -24,6 +25,7 @@ from app.core.exceptions import (
 
 _APP_ERROR_STATUS: dict[type[AppError], int] = {
     ActiveInterviewExists: 409,
+    AnswerTooLong: 422,
     InterviewNotFound: 404,
     NoActiveInterview: 404,
     InterviewAlreadyFinished: 409,

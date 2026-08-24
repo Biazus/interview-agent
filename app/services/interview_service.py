@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.evaluator import EvaluationParseError
 from app.agents.orchestrator import OrchestratorAgent
+from app.core.constants import MAX_ANSWER_LENGTH
 from app.core.domain.interfaces import CandidateReport
 from app.core.domain.registry import (
     DomainEnum,
@@ -16,6 +17,7 @@ from app.core.domain.registry import (
 )
 from app.core.exceptions import (
     ActiveInterviewExists,
+    AnswerTooLong,
     DuplicateTurn,
     EmptyAnswer,
     InterviewAlreadyFinished,
@@ -176,6 +178,9 @@ class InterviewService:
     ) -> dict:
         if not answer.strip():
             raise EmptyAnswer()
+
+        if len(answer) > MAX_ANSWER_LENGTH:
+            raise AnswerTooLong()
 
         interview = await self._repository.get_by_id_for_candidate(
             interview_id, candidate_id

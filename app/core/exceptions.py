@@ -1,3 +1,6 @@
+from app.core.constants import MAX_ANSWER_LENGTH
+
+
 class AppError(Exception):
     """Erro de aplicação independente de HTTP."""
 
@@ -6,6 +9,11 @@ class AppError(Exception):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(message or self.message)
+
+
+class AnswerTooLong(AppError):
+    code = "ANSWER_TOO_LONG"
+    message = f"A resposta não pode ter mais de {MAX_ANSWER_LENGTH} caracteres."
 
 
 class ActiveInterviewExists(AppError):
