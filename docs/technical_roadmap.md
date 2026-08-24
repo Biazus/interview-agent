@@ -1,7 +1,6 @@
 # Technical Roadmap — interview-agent
 
-Strategic architecture and evolution plan for **interview-agent** (~v0.1.0).  
-Derived from **analista-generico-agent** (code review, Aug 2026) and **sugestoes-arquiteturais-agent** (scale & future direction).
+Strategic architecture and evolution plan for **interview-agent** (~v0.1.0).
 
 For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 
@@ -9,11 +8,27 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 
 ## Current architectural vision
 
-The project is a **FastAPI monolith** with clear layering (`api` → `services` → `repositories` → `agents`), multi-domain registration via `app/core/domain/registry.py` (currently only `async_messaging` in `app/domains/async_messaging/bootstrap.py`), Postgres persistence with useful constraints (`uq_interviews_candidate_active`, `uq_interview_turn_number` in `app/core/db/models.py`), RAG on Qdrant (`app/core/rag/`) with **fastembed** (ONNX) in-process embeddings (`app/core/rag/embeddings.py`), and LLM via Groq → OpenRouter fallback (`app/core/llm/fallback.py`).
+**v0.1 MVP** — FastAPI monolith with layered design and one live domain today.
 
-The critical `submit_answer` path in `InterviewService` is **synchronous per request**: evaluate with LLM + RAG, optionally generate report on the final turn, then persist. This is a deliberate trade-off (documented in `todo.md`).
+### Stack
 
-Singletons via `@lru_cache` (`get_llm_chain`, `get_embedding_provider`, `get_cached_domain`) make the API *almost* stateless for HTTP, but **stateful in-process** for the embedding model and Qdrant clients. The Docker entrypoint (`scripts/docker-entrypoint.sh`) runs **migrations + Uvicorn only**; Qdrant seed is a separate compose profile job (`scripts/run_seed.py`, ADR-005). `start_interview` fails fast with **`503 RAG_NOT_READY`** when the collection is empty or the manifest is stale. Production image is **~144 MB** (multi-stage build; CI hard gate at 650 MB).
+- **Layering:** `api` → `services` → `repositories` → `agents`
+- **Domains:** `DomainModule` + `register_domain()` (`app/core/domain/registry.py`); only `async_messaging` wired via `app/domains/async_messaging/bootstrap.py`
+- **Persistence:** Postgres with partial unique indexes (`uq_interviews_candidate_active`, `uq_interview_turn_number` in `app/core/db/models.py`)
+- **RAG:** Qdrant (`app/core/rag/`) + **fastembed** (ONNX) in-process embeddings (`app/core/rag/embeddings.py`)
+- **LLM:** Groq primary → OpenRouter fallback (`app/core/llm/fallback.py`)
+
+### Critical path (`submit_answer`)
+
+- Synchronous per request: evaluate (LLM + RAG) → optional final-turn report → persist
+- Deliberate MVP trade-off — rationale and follow-ups in `[todo.md](./todo.md)`
+
+### Runtime & deployment
+
+- **Almost stateless HTTP:** singletons via `@lru_cache` (`get_llm_chain`, `get_embedding_provider`, `get_cached_domain`); embedding model and Qdrant clients remain in-process state
+- **Container startup:** migrations + Uvicorn only (`scripts/docker-entrypoint.sh`); Qdrant seed is a separate compose profile job (`scripts/run_seed.py`, [ADR-005](./adr/ADR-005-qdrant-seed-strategy.md))
+- **RAG gate:** `start_interview` returns `503 RAG_NOT_READY` when the collection is empty or the manifest is stale
+- **Image:** multi-stage build ~144 MB; CI hard gate at 650 MB (`scripts/ci/check_image_size.sh`)
 
 ### Strengths to preserve
 
