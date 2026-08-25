@@ -38,3 +38,53 @@ def test_settings_loads_llm_secrets(monkeypatch: pytest.MonkeyPatch):
 
     assert settings.GROQ_API_KEY == "secret-groq"
     assert settings.OPENROUTER_API_KEY == "secret-openrouter"
+
+
+def test_settings_cors_origins_defaults_when_not_set(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://localhost/test")
+    monkeypatch.setenv("GROQ_API_KEY", "groq-test")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-test")
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
+
+    settings = Settings()
+
+    assert settings.cors_origins == [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+
+def test_settings_cors_origins_parses_comma_separated_env(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://localhost/test")
+    monkeypatch.setenv("GROQ_API_KEY", "groq-test")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-test")
+    monkeypatch.setenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,https://app.example.com",
+    )
+
+    settings = Settings()
+
+    assert settings.cors_origins == [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://app.example.com",
+    ]
+
+
+def test_settings_cors_origins_empty_string_falls_back_to_default(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://localhost/test")
+    monkeypatch.setenv("GROQ_API_KEY", "groq-test")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-test")
+    monkeypatch.setenv("CORS_ORIGINS", "")
+
+    settings = Settings()
+
+    assert settings.cors_origins == [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
