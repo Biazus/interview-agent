@@ -32,6 +32,3 @@ node_modules/
 frontend/dist/
 .env.local
 frontend/.env.local
-
-# My notes
-notes.txt
