@@ -91,3 +91,46 @@ async def test_protected_route_with_invalid_token_returns_401(client: AsyncClien
 
     assert response.status_code == 401
     assert response.json()["code"] == "INVALID_TOKEN"
+
+
+@pytest.mark.asyncio
+async def test_second_login_invalidates_previous_token(client: AsyncClient):
+    email = "single-session@candidato.com"
+    password = "senha-segura-123"
+    await client.post("/auth/register", json={"email": email, "password": password})
+
+    login_a = await client.post(
+        "/auth/login",
+        json={"email": email, "password": password},
+    )
+    assert login_a.status_code == 200
+    token_a = login_a.json()["access_token"]
+
+    active_with_a = await client.get(
+        "/interviews/active",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+    assert active_with_a.status_code == 404
+    assert active_with_a.json()["code"] == "NO_ACTIVE_INTERVIEW"
+
+    login_b = await client.post(
+        "/auth/login",
+        json={"email": email, "password": password},
+    )
+    assert login_b.status_code == 200
+    token_b = login_b.json()["access_token"]
+    assert token_b != token_a
+
+    revoked_a = await client.get(
+        "/interviews/active",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+    assert revoked_a.status_code == 401
+    assert revoked_a.json()["code"] == "INVALID_TOKEN"
+
+    active_with_b = await client.get(
+        "/interviews/active",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert active_with_b.status_code == 404
+    assert active_with_b.json()["code"] == "NO_ACTIVE_INTERVIEW"
