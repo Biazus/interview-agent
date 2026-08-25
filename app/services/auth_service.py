@@ -60,6 +60,18 @@ class AuthService:
             )
             raise InvalidCredentials()
 
+        revoked_count = await self._auth_token_repository.delete_by_candidate_id(
+            candidate.id
+        )
+        if revoked_count > 0:
+            logger.info(
+                "Previous auth tokens revoked on login",
+                extra={
+                    "candidate_id": str(candidate.id),
+                    "revoked_count": revoked_count,
+                },
+            )
+
         raw_token, token_hash = generate_token()
         expires_at = datetime.now(UTC) + timedelta(
             seconds=settings.AUTH_TOKEN_TTL_SECONDS

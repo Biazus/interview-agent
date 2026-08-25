@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db.models import AuthToken
@@ -22,6 +22,11 @@ class AuthTokenRepository:
         self._session.add(auth_token)
         await self._session.flush()
         return auth_token
+
+    async def delete_by_candidate_id(self, candidate_id: UUID) -> int:
+        stmt = delete(AuthToken).where(AuthToken.candidate_id == candidate_id)
+        result = await self._session.execute(stmt)
+        return result.rowcount
 
     async def find_candidate_by_hash(
         self, token_hash: str
