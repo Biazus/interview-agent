@@ -3,7 +3,8 @@ import { useAuthSync } from './auth/useAuthSync.ts'
 import { GuestRoute } from './components/guards/GuestRoute.tsx'
 import { RequireAuth } from './components/guards/RequireAuth.tsx'
 import { AppShell } from './components/layout/AppShell.tsx'
-import { InterviewStubPage } from './pages/InterviewStubPage.tsx'
+import { InterviewRouteGuard } from './components/guards/InterviewRouteGuard.tsx'
+import { InterviewPage } from './pages/InterviewPage.tsx'
 import { LoginPage } from './pages/LoginPage.tsx'
 import { RegisterPage } from './pages/RegisterPage.tsx'
 import { ReportStubPage } from './pages/ReportStubPage.tsx'
@@ -22,7 +23,9 @@ function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
           <Route path="/" element={<SetupPage />} />
-          <Route path="/interview/:interviewId" element={<InterviewStubPage />} />
+          <Route path="/interview/:interviewId" element={<InterviewRouteGuard />}>
+            <Route index element={<InterviewPage />} />
+          </Route>
           <Route path="/report/:interviewId" element={<ReportStubPage />} />
         </Route>
       </Route>
