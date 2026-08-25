@@ -6,9 +6,10 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    // Tailwind must run before React/Babel so @import "tailwindcss" is compiled in dev.
+    tailwindcss(),
     react(),
     babel({ presets: [reactCompilerPreset()] }),
-    tailwindcss(),
   ],
   server: {
     port: 5173,
