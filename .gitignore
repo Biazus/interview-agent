@@ -27,5 +27,8 @@ wheels/
 .coverage.*
 htmlcov/
 
-# My notes
-notes.txt
+# Frontend
+node_modules/
+frontend/dist/
+.env.local
+frontend/.env.local

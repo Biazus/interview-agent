@@ -28,7 +28,7 @@ Severity: **Critical** · **High** · **Medium** · **Low** · **Info**
   **Impact:** Brute-force on login/register.  
   **Recommendation:** Middleware or reverse-proxy limits before exposing publicly.
 
-- [ ] **[Info]** No CORS configured — required when a browser frontend is added.
+- [x] **[Info]** CORS configured in `app/api/main.py` via `CORS_ORIGINS` in settings.
 
 ---
 
