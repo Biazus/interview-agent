@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Interview Agent API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.cors_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
