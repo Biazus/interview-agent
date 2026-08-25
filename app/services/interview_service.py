@@ -48,6 +48,9 @@ def _integrity_constraint_name(exc: IntegrityError) -> str | None:
     orig = exc.orig
     if orig is None:
         return None
+    constraint = getattr(orig, "constraint_name", None)
+    if constraint:
+        return constraint
     diag = getattr(orig, "diag", None)
     if diag is not None:
         return getattr(diag, "constraint_name", None)
@@ -159,6 +162,7 @@ class InterviewService:
                 "difficulty": state.difficulty,
             },
         )
+        await self._session.commit()
         return to_interview_response(interview, rehydrated_state)
 
     async def get_active_interview(self, candidate_id: UUID) -> dict:
@@ -282,6 +286,7 @@ class InterviewService:
             ),
         )
 
+        await self._session.commit()
         return to_interview_response(updated, new_state)
 
     async def get_report(self, candidate_id: UUID, interview_id: UUID) -> dict:
