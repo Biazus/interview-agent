@@ -10,19 +10,20 @@ from app.api.dependencies import get_db
 from app.api.main import app
 from app.core.rag.embedding_config import EMBEDDING_MODEL_ID
 from app.core.rag.seed_manifest import compute_manifest_hash
-from app.domains.async_messaging import rag_config
+from app.domains.async_messaging.rag_config import build_rag_config
 
 
 def _ready_vector_store() -> MagicMock:
+    rag_config = build_rag_config()
     store = MagicMock(spec=["get_collection_info"])
     store.get_collection_info.return_value = (
         100,
         {
             "seed_manifest_hash": compute_manifest_hash(
-                rag_config.SEED_MANIFEST_FILES, EMBEDDING_MODEL_ID
+                rag_config.seed_manifest_files, EMBEDDING_MODEL_ID
             ),
             "embedding_model_id": EMBEDDING_MODEL_ID,
-            "seed_manifest_files": list(rag_config.SEED_MANIFEST_FILES),
+            "seed_manifest_files": list(rag_config.seed_manifest_files),
             "seeded_at": "2026-01-01T00:00:00Z",
         },
     )

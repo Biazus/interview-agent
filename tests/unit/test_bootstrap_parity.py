@@ -1,42 +1,52 @@
-from pathlib import Path
 from unittest.mock import patch
 
-from app.core.domain.registry import clear_registry, list_registered_domains
+import pytest
+from fastapi import FastAPI
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-
-
-def test_main_lifespan_imports_app_bootstrap():
-    # Contrato estático: após Green, lifespan delega registro a app.bootstrap
-    # e não chama register_async_messaging_domain diretamente no bloco startup.
-    main_source = (REPO_ROOT / "app/api/main.py").read_text(encoding="utf-8")
-    lifespan_section = main_source.split("async def lifespan", maxsplit=1)[1]
-    startup_body = lifespan_section.split("yield", maxsplit=1)[0]
-
-    assert "app.bootstrap" in startup_body
-    assert "register_async_messaging_domain" not in startup_body
+from app.bootstrap import bootstrap_domains
+from app.core.domain.registry import (
+    DomainEnum,
+    clear_registry,
+    get_cached_domain,
+    list_registered_domains,
+)
 
 
 def test_run_seed_and_main_share_same_registered_domains():
-    run_seed_source = (REPO_ROOT / "scripts/run_seed.py").read_text(encoding="utf-8")
-    main_source = (REPO_ROOT / "app/api/main.py").read_text(encoding="utf-8")
-
-    assert "app.bootstrap" in run_seed_source
-    assert "app.bootstrap" in main_source
+    clear_registry()
+    bootstrap_domains()
+    bootstrap_domains_from_seed = set(list_registered_domains())
 
     clear_registry()
-    import app.bootstrap  # noqa: F401 — registra domínios ao importar
+    bootstrap_domains()
+    bootstrap_domains_from_main = set(list_registered_domains())
 
-    bootstrap_domains = set(list_registered_domains())
+    assert (
+        bootstrap_domains_from_seed
+        == bootstrap_domains_from_main
+        == {"async_messaging"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_lifespan_warms_only_registered_domains():
+    from app.api import main as main_module
 
     clear_registry()
-    from app.domains.async_messaging.bootstrap import register_async_messaging_domain
+    warmed_domains: list[str] = []
 
-    register_async_messaging_domain()
-    main_style_domains = set(list_registered_domains())
+    def track_warmup(domain: DomainEnum):
+        warmed_domains.append(domain.value)
+        return get_cached_domain(domain)
 
-    assert bootstrap_domains == main_style_domains
-    assert bootstrap_domains == {"async_messaging"}
+    with patch.object(main_module, "get_cached_domain", side_effect=track_warmup):
+        async with main_module.lifespan(FastAPI()):
+            pass
+
+    registered = set(list_registered_domains())
+    assert set(warmed_domains) == registered
+    assert DomainEnum.FAKE_TEST.value not in warmed_domains
+    assert DomainEnum.FAKE_TEST_TWO.value not in warmed_domains
 
 
 def test_run_seed_calls_ingest_for_each_registered_domain(two_registered_domains):

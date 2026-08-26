@@ -7,10 +7,11 @@ from app.core.exceptions import RagNotReady
 from app.core.rag.embedding_config import EMBEDDING_MODEL_ID
 from app.core.rag.rag_readiness import check_rag_ready
 from app.core.rag.seed_manifest import compute_manifest_hash
-from app.domains.async_messaging import rag_config
+from app.domains.async_messaging.rag_config import build_rag_config
 
-COLLECTION_NAME = rag_config.COLLECTION_NAME
-MANIFEST_FILES = rag_config.SEED_MANIFEST_FILES
+_ASYNC_MESSAGING_RAG = build_rag_config()
+COLLECTION_NAME = _ASYNC_MESSAGING_RAG.collection_name
+MANIFEST_FILES = _ASYNC_MESSAGING_RAG.seed_manifest_files
 
 
 def _expected_manifest_hash() -> str:

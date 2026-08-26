@@ -8,8 +8,8 @@ from app.api.errors import register_error_handlers
 from app.api.routers import auth, discovery, interviews
 from app.core.domain.registry import (
     DomainEnum,
-    DomainNotRegisteredError,
     get_cached_domain,
+    list_registered_domains,
 )
 from app.core.logging import configure_logging
 from app.core.settings import settings
@@ -22,20 +22,17 @@ async def lifespan(app: FastAPI):
     configure_logging(settings.LOG_LEVEL)
 
     # Startup: registra todos os domínios disponíveis
-    import app.bootstrap  # noqa: F401 — registra domínios ao importar
+    import app.bootstrap
 
-    for domain in DomainEnum:
-        try:
-            get_cached_domain(domain)
-            logger.info(
-                "Domain registered at startup",
-                extra={"domain": domain.value},
-            )
-        except DomainNotRegisteredError:
-            logger.warning(
-                "Domain not registered at startup",
-                extra={"domain": domain.value},
-            )
+    app.bootstrap.bootstrap_domains()
+
+    for domain_value in list_registered_domains():
+        domain = DomainEnum(domain_value)
+        get_cached_domain(domain)
+        logger.info(
+            "Domain warmed at startup",
+            extra={"domain": domain.value},
+        )
     yield
     # Shutdown: nada a limpar por enquanto
 

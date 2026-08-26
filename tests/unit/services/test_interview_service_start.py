@@ -10,9 +10,7 @@ from app.services.interview_service import InterviewService
 
 
 @pytest.fixture
-def interview_service_setup(
-    registered_fake_domain_with_rag, async_messaging_rag_config
-):
+def interview_service_setup(registered_fake_domain, async_messaging_rag_config):
     candidate_id = uuid4()
     interview_id = uuid4()
 
@@ -20,7 +18,7 @@ def interview_service_setup(
     repo.get_active_by_candidate = AsyncMock(return_value=None)
     repo.create_interview = AsyncMock(return_value=interview_id)
 
-    question = registered_fake_domain_with_rag.question_bank.next_question(
+    question = registered_fake_domain.question_bank.next_question(
         topic="dead_letter_queue", difficulty=1
     )
     interview_row = MagicMock(

@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 from app.core.domain.interfaces import RubricProvider
@@ -12,10 +10,9 @@ from app.core.domain.registry import (
     register_domain,
 )
 from app.domains.async_messaging.question_bank import StaticAsyncMessagingQuestionBank
+from app.domains.async_messaging.rag_config import build_rag_config
 from app.domains.async_messaging.rubrics import StaticAsyncMessagingRubricProvider
 from tests.fakes.retriever import FakeRAGRetriever
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture(autouse=True)
@@ -55,11 +52,7 @@ def domain_module(
 
 @pytest.fixture
 def async_messaging_rag_config():
-    return DomainRagConfig(
-        collection_name="async_messaging",
-        seed_manifest_files=("app/domains/async_messaging/rag_seed.yaml",),
-        seed_yaml_path=str(REPO_ROOT / "app/domains/async_messaging/rag_seed.yaml"),
-    )
+    return build_rag_config()
 
 
 @pytest.fixture
@@ -121,29 +114,6 @@ def registered_fake_domain(
         factory,
         async_messaging_rag_config,
     )
-    return get_domain(DomainEnum.ASYNC_MESSAGING)
-
-
-@pytest.fixture
-def registered_fake_domain_with_rag(
-    fake_retriever: FakeRAGRetriever,
-    question_bank: StaticAsyncMessagingQuestionBank,
-    rubric_provider: StaticAsyncMessagingRubricProvider,
-    async_messaging_rag_config,
-) -> DomainModule:
-    def factory() -> DomainModule:
-        return DomainModule(
-            retriever=fake_retriever,
-            question_bank=question_bank,
-            rubric_provider=rubric_provider,
-        )
-
-    register_domain(
-        DomainEnum.ASYNC_MESSAGING,
-        factory,
-        async_messaging_rag_config,
-    )
-
     return get_domain(DomainEnum.ASYNC_MESSAGING)
 
 
