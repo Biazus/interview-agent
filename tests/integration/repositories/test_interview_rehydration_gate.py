@@ -10,6 +10,7 @@ from app.core.domain.registry import (
     register_domain,
 )
 from app.domains.async_messaging.question_bank import StaticAsyncMessagingQuestionBank
+from app.domains.async_messaging.rag_config import build_rag_config
 from app.domains.async_messaging.rubrics import StaticAsyncMessagingRubricProvider
 from app.repositories import interview_mapper
 from tests.fakes.llm import DeterministicLLM
@@ -30,7 +31,7 @@ def registered_fake_domain() -> DomainModule:
             rubric_provider=rubric_provider,
         )
 
-    register_domain(DomainEnum.ASYNC_MESSAGING, factory)
+    register_domain(DomainEnum.ASYNC_MESSAGING, factory, build_rag_config())
     return get_domain(DomainEnum.ASYNC_MESSAGING)
 
 

@@ -1,6 +1,5 @@
 """Run RAG seed for all registered domains."""
 
-import importlib
 import logging
 import sys
 from pathlib import Path
@@ -11,8 +10,13 @@ if str(_ROOT) not in sys.path:
 
 import app.bootstrap  # noqa: F401, E402 — registers domains on import
 
-from app.core.domain.registry import list_registered_domains  # noqa: E402
+from app.core.domain.registry import (  # noqa: E402
+    DomainEnum,
+    get_domain_rag_config,
+    list_registered_domains,
+)
 from app.core.rag.qdrant_wait import wait_for_qdrant  # noqa: E402
+from app.core.rag.seed_ingestion import ingest_domain_seed  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +35,8 @@ def main() -> None:
 
     for domain_value in domains:
         logger.info("Seeding domain: %s", domain_value)
-        ingestion_module = importlib.import_module(
-            f"app.domains.{domain_value}.rag_ingestion"
-        )
-        ingestion_module.ingest_seed_documents()
+        config = get_domain_rag_config(DomainEnum(domain_value))
+        ingest_domain_seed(config)
 
 
 if __name__ == "__main__":

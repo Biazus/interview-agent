@@ -13,7 +13,6 @@ from app.core.domain.registry import (
 )
 from app.core.logging import configure_logging
 from app.core.settings import settings
-from app.domains.async_messaging.bootstrap import register_async_messaging_domain
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +22,8 @@ async def lifespan(app: FastAPI):
     configure_logging(settings.LOG_LEVEL)
 
     # Startup: registra todos os domínios disponíveis
-    register_async_messaging_domain()
+    import app.bootstrap  # noqa: F401 — registra domínios ao importar
+
     for domain in DomainEnum:
         try:
             get_cached_domain(domain)

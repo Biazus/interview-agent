@@ -32,3 +32,4 @@ node_modules/
 frontend/dist/
 .env.local
 frontend/.env.local
+roadmap.md
