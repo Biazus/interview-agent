@@ -1,4 +1,3 @@
-import importlib
 import logging
 from collections.abc import Callable
 from uuid import UUID
@@ -14,6 +13,7 @@ from app.core.domain.registry import (
     DomainEnum,
     DomainNotRegisteredError,
     get_cached_domain,
+    get_domain_rag_config,
 )
 from app.core.exceptions import (
     ActiveInterviewExists,
@@ -102,12 +102,8 @@ class InterviewService:
         if topic not in module.question_bank.topics():
             raise InvalidTopic()
 
-        rag_config = importlib.import_module(
-            f"app.domains.{domain_enum.value}.rag_config"
-        )
-        self._rag_readiness_check(
-            rag_config.COLLECTION_NAME, rag_config.SEED_MANIFEST_FILES
-        )
+        rag = get_domain_rag_config(domain_enum)
+        self._rag_readiness_check(rag.collection_name, rag.seed_manifest_files)
 
         orchestrator = self._orchestrator_factory(domain_enum)
         state = orchestrator.start(topic, difficulty)

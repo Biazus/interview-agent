@@ -86,11 +86,11 @@ Severity: **Critical** · **High** · **Medium** · **Low** · **Info**
   **Impact:** Unhandled errors return non-standard 500 without `{"detail","code"}` shape.  
   **Recommendation:** Generic handler that logs and returns consistent JSON.
 
-- [ ] **[Medium]** Dead code: `get_active_domain()` in `app/api/dependencies.py` is never used.  
+- [x] **[Medium]** Dead code: `get_active_domain()` in `app/api/dependencies.py` is never used.  
   **Recommendation:** Remove or wire into orchestrator factory.
 
-- [ ] **[Low]** `app/bootstrap.py` duplicates domain registration and is not referenced.  
-  **Recommendation:** Remove or document for script-only use.
+- [x] **[Low]** `app/bootstrap.py` — dual bootstrap paths (import side-effect + `bootstrap_domains()` in API lifespan).  
+  **Recommendation:** Idempotent double invocation accepted; no refactor this cycle.
 
 ---
 

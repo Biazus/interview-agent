@@ -13,7 +13,7 @@ from app.agents.selector_naive import NaiveSelector
 from app.core.exceptions import InvalidToken, MissingToken
 from app.core.auth.db_token_validator import DbTokenValidator
 from app.core.db.session import async_session_factory
-from app.core.domain.registry import DomainEnum, DomainModule, get_cached_domain
+from app.core.domain.registry import DomainEnum, get_cached_domain
 from app.core.llm.bootstrap import build_default_llm_chain
 from app.core.llm.fallback import FallbackLLMProvider
 from app.repositories.auth_token_repository import AuthTokenRepository
@@ -26,17 +26,6 @@ from app.services.interview_service import InterviewService
 logger = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer(auto_error=False)
-
-
-def get_active_domain() -> DomainModule:
-    """
-    Resolve o domínio ativo da entrevista.
-
-    Por enquanto fixo em ASYNC_MESSAGING; quando houver múltiplos domínios
-    ativos simultaneamente (ex: escolha por sessão de usuário), este ponto
-    muda para ler de configuração/request em vez de constante.
-    """
-    return get_cached_domain(DomainEnum.ASYNC_MESSAGING)
 
 
 @lru_cache

@@ -4,24 +4,22 @@ from pathlib import Path
 
 import yaml
 
+from app.core.domain.rag_config import DomainRagConfig
 from app.core.rag.embedding_config import EMBEDDING_MODEL_ID
 from app.core.rag.factory import get_embedding_provider, get_vector_store
 from app.core.rag.seed_manifest import compute_manifest_hash, manifest_matches
-from app.domains.async_messaging import rag_config
 
 logger = logging.getLogger(__name__)
 
-_SEED_PATH = Path(__file__).parent / "rag_seed.yaml"
 
-
-def _load_seed_documents() -> list[dict]:
-    with open(_SEED_PATH, encoding="utf-8") as f:
+def _load_seed_documents(seed_yaml_path: str) -> list[dict]:
+    with open(Path(seed_yaml_path), encoding="utf-8") as f:
         data = yaml.safe_load(f)
     return data["documents"]
 
 
-def _seed_collection(store, collection_name: str) -> int:
-    documents = _load_seed_documents()
+def _seed_collection(store, collection_name: str, seed_yaml_path: str) -> int:
+    documents = _load_seed_documents(seed_yaml_path)
     embedder = get_embedding_provider()
     texts = [doc["text"] for doc in documents]
     vectors = embedder.embed_batch(texts)
@@ -34,9 +32,9 @@ def _seed_collection(store, collection_name: str) -> int:
     return len(documents)
 
 
-def ingest_seed_documents() -> None:
-    collection_name = rag_config.COLLECTION_NAME
-    manifest_files = rag_config.SEED_MANIFEST_FILES
+def ingest_domain_seed(config: DomainRagConfig) -> None:
+    collection_name = config.collection_name
+    manifest_files = config.seed_manifest_files
     store = get_vector_store()
 
     store.ensure_collection(collection_name)
@@ -60,7 +58,7 @@ def ingest_seed_documents() -> None:
         store.drop_collection(collection_name)
 
     store.ensure_collection(collection_name)
-    document_count = _seed_collection(store, collection_name)
+    document_count = _seed_collection(store, collection_name, config.seed_yaml_path)
 
     store.set_collection_metadata(
         collection_name,

@@ -26,7 +26,7 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 ### Runtime & deployment
 
 - **Almost stateless HTTP:** singletons via `@lru_cache` (`get_llm_chain`, `get_embedding_provider`, `get_cached_domain`); embedding model and Qdrant clients remain in-process state
-- **Container startup:** migrations + Uvicorn only (`scripts/docker-entrypoint.sh`); Qdrant seed is a separate compose profile job (`scripts/run_seed.py`, [ADR-005](./adr/ADR-005-qdrant-seed-strategy.md))
+- **Container startup:** migrations + Uvicorn only (`scripts/docker-entrypoint.sh`); Qdrant seed is a separate compose profile job (`scripts/run_seed.py`)
 - **RAG gate:** `start_interview` returns `503 RAG_NOT_READY` when the collection is empty or the manifest is stale
 - **Image:** multi-stage build ~144 MB; CI hard gate at 650 MB (`scripts/ci/check_image_size.sh`)
 
@@ -99,7 +99,7 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 | 10  | **LLM circuit breaker**       | Sequential Groq → OpenRouter without shared state under peak | Per-provider circuit breaker (Redis); deferred report retry                                        | Recurring rate limits                  |
 | 11  | **RAG cache**                 | Every `evaluate()` embeds answer and queries Qdrant          | LRU by `(topic, answer_hash)` or pre-computed context per `question_id`                            | RAG >30% of evaluate latency           |
 | 12  | **Distributed observability** | Plain-text logs, no correlation                              | JSON logs + `request_id`; OpenTelemetry; Prometheus (`llm_tokens_total`, `submit_latency_seconds`) | Team >1 or SLO defined                 |
-| 13  | **Multi-domain governance**   | `DomainEnum` placeholders; dead `get_active_domain()`        | Plugin per `domains/<name>/` (bootstrap, Qdrant collection, versioned YAML); feature flags         | 2nd real domain (e.g. Kafka)           |
+| 13  | **Multi-domain governance**   | `DomainEnum` placeholders; registry + per-domain `get_orchestrator(domain)` | Plugin per `domains/<name>/` (bootstrap, Qdrant collection, versioned YAML); feature flags         | 2nd real domain (e.g. Kafka)           |
 | 14  | **Auth lifecycle**            | Tokens accumulate without purge                              | Periodic `DELETE WHERE expires_at < now()`; `POST /auth/logout`                                    | Before public registration             |
 | 15  | **Separate** `InterviewState` | Metadata, history, report mixed (`interfaces.py` TODO)       | `InterviewSession` + `InterviewHistory`                                                            | Before E2E complexity grows            |
 
@@ -137,7 +137,7 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 | ADR-002 | Sync vs async LLM     | Sync until frontend ships; queue when P95 exceeds SLA  | Aggressive timeout only                     |
 | ADR-003 | Unified LLM contract  | Pydantic structured output for evaluate **and** report | Tool calling; few-shot text parsing         |
 | ADR-004 | Submit idempotency    | `Idempotency-Key` HTTP + Postgres table                | DB constraints only (`DuplicateTurn`)       |
-| ADR-005 | Qdrant seed strategy  | Init job + manifest hash; see [ADR-005](./adr/ADR-005-qdrant-seed-strategy.md) | Conditional seed in entrypoint              |
+| ADR-005 | Qdrant seed strategy  | Init job + manifest hash                                                       | Conditional seed in entrypoint              |
 | ADR-006 | Observability stack   | OpenTelemetry + JSON structured logs                   | Extra log fields only (interim)             |
 | ADR-007 | Multi-tenant model    | `tenant_id` + Postgres RLS when B2B                    | Schema per tenant; single-tenant per deploy |
 | ADR-008 | Candidate feedback    | Keep hidden (current) or expose level only             | Full real-time feedback                     |

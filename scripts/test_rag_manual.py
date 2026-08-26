@@ -1,15 +1,20 @@
 import asyncio
 
+import app.bootstrap  # noqa: F401 — registers domains on import
+
+from app.core.domain.registry import DomainEnum, get_domain_rag_config
 from app.core.rag.factory import get_qdrant_retriever
-from app.domains.async_messaging.rag_ingestion import ingest_seed_documents
+from app.core.rag.seed_ingestion import ingest_domain_seed
 
 
 async def main():
+    config = get_domain_rag_config(DomainEnum.ASYNC_MESSAGING)
+
     print("--- Ingestão ---")
-    ingest_seed_documents()
+    ingest_domain_seed(config)
 
     print("\n--- Busca de teste ---")
-    retriever = get_qdrant_retriever("async_messaging")
+    retriever = get_qdrant_retriever(config.collection_name)
 
     queries = [
         "Uma Dead Letter Queue (DLQ) no Amazon SQS é uma fila usada por outras filas (as filas de origem) para armazenar mensagens que não puderam ser processadas com sucesso",

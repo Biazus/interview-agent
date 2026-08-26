@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 import httpx
 
+from app.core.constants import RAG_SEED_DOCKER_CMD, RAG_SEED_UV_CMD
+
 API = "http://localhost:8000"
 FRONTEND = "http://localhost:5173"
 TIMEOUT = httpx.Timeout(120.0, connect=10.0)
@@ -113,6 +115,21 @@ def main() -> int:
             headers=headers,
             json={"domain": domain, "topic": topic, "difficulty": 1},
         )
+        if start.status_code == 503:
+            try:
+                body = start.json()
+            except Exception:
+                body = {}
+            if body.get("code") == "RAG_NOT_READY":
+                checks.append(
+                    Check(
+                        "POST /interviews (iniciar)",
+                        False,
+                        _rag_not_ready_detail(),
+                    )
+                )
+                _print_report(checks)
+                return 1
         checks.append(
             Check(
                 "POST /interviews (iniciar)",
@@ -260,6 +277,15 @@ def main() -> int:
     )
 
     return _print_report(checks)
+
+
+def _rag_not_ready_detail() -> str:
+    return (
+        "RAG_NOT_READY: Qdrant vazio ou manifest stale. "
+        "Execute o seed antes de iniciar entrevistas:\n"
+        f"  {RAG_SEED_DOCKER_CMD}\n"
+        f"  # ou: {RAG_SEED_UV_CMD}"
+    )
 
 
 def _check_cors(client: httpx.Client) -> Check:

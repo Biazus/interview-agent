@@ -4,7 +4,7 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.rag.embedding_config import EMBEDDING_MODEL_ID
-from app.domains.async_messaging import rag_config
+from app.domains.async_messaging.rag_config import build_rag_config
 from tests.fakes.llm import DeterministicLLM
 
 _START_PAYLOAD = {
@@ -26,13 +26,14 @@ def _vector_store_empty() -> MagicMock:
 
 
 def _vector_store_stale() -> MagicMock:
+    rag_config = build_rag_config()
     store = MagicMock(spec=["get_collection_info"])
     store.get_collection_info.return_value = (
         100,
         {
             "seed_manifest_hash": "0" * 64,
             "embedding_model_id": EMBEDDING_MODEL_ID,
-            "seed_manifest_files": list(rag_config.SEED_MANIFEST_FILES),
+            "seed_manifest_files": list(rag_config.seed_manifest_files),
             "seeded_at": "2026-01-01T00:00:00Z",
         },
     )
