@@ -5,7 +5,6 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.evaluator import EvaluationParseError
 from app.agents.orchestrator import OrchestratorAgent
 from app.core.constants import MAX_ANSWER_LENGTH
 from app.core.domain.interfaces import CandidateReport
@@ -197,7 +196,7 @@ class InterviewService:
 
         try:
             new_state = await orchestrator.submit_answer(state, answer)
-        except (LLMProviderError, EvaluationParseError) as exc:
+        except LLMProviderError as exc:
             logger.error(
                 "LLM unavailable during answer submission",
                 extra=interview_extra(
@@ -274,7 +273,7 @@ class InterviewService:
                 candidate_id,
                 turn_number=len(new_state.history),
                 finished=new_state.finished,
-                evaluation_level=evaluation.level,
+                evaluation_score=evaluation.score,
                 topic=evaluation.topic,
                 tokens_used=evaluation.raw_response.tokens_used,
                 provider=evaluation.raw_response.provider,

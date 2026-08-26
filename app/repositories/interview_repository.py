@@ -31,7 +31,7 @@ def _build_turn(
         question_difficulty=question.difficulty,
         question_prompt=question.prompt,
         answer_text=answer,
-        evaluation_level=evaluation.level,
+        evaluation_score=evaluation.score,
         evaluation_feedback=evaluation.feedback,
         evaluation_provider=evaluation.raw_response.provider,
         evaluation_model=evaluation.raw_response.model,
@@ -67,7 +67,7 @@ def _turn_from_payload(
     )
     evaluation = Evaluation(
         topic=question.topic,
-        level=str(payload["evaluation_level"]),
+        score=int(payload["evaluation_score"]),
         feedback=str(payload["evaluation_feedback"]),
         raw_response=raw_response,
     )

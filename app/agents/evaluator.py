@@ -2,6 +2,7 @@ import asyncio
 import logging
 from functools import partial
 
+from app.agents.evaluation_schema import EvaluationLLMOutput
 from app.core.domain.interfaces import (
     Chunk,
     Evaluation,
@@ -9,17 +10,29 @@ from app.core.domain.interfaces import (
     Rubric,
     RubricProvider,
 )
-from app.core.llm.exceptions import LLMProviderError
 from app.core.llm.interfaces import LLMProvider
-from app.core.llm.requests import GenerateRequest
+from app.core.llm.structured import generate_structured_with_response
 
 logger = logging.getLogger(__name__)
 
-_LEVEL_MAP = {"FRACA": "weak", "MEDIA": "medium", "FORTE": "strong"}
+_SYSTEM_PROMPT = """Você é um avaliador técnico de entrevistas de system design.
 
+Atribua uma nota global de 1 a 100 para a resposta do candidato e justifique em até 3 frases.
+Use os exemplos Fraca / Média / Forte dos critérios como calibração:
+- Fraca: nota entre 1 e 30
+- Média: nota entre 31 e 69
+- Forte: nota entre 70 e 100
 
-class EvaluationParseError(LLMProviderError):
-    """Resposta do LLM não segue o formato NIVEL/FEEDBACK esperado."""
+Priorize correção sobre completude. Resposta correta mas incompleta = nota média.
+Nota alta = correta com pelo menos um detalhe relevante além do básico.
+Não exija cobrir todos os trade-offs do material de referência.
+
+Responda SOMENTE com um objeto JSON válido, sem markdown nem texto fora do JSON.
+Use exatamente estas chaves:
+
+- "score": inteiro de 1 a 100
+- "feedback": string com a justificativa (até 3 frases)
+"""
 
 
 class EvaluatorAgent:
@@ -43,12 +56,13 @@ class EvaluatorAgent:
         )
 
         prompt = self._build_prompt(question, answer, rubric, chunks)
-        response = await self._llm.generate(GenerateRequest.simple(prompt))
-        level, feedback = self._parse_response(response.text, topic=topic)
-
-        return Evaluation(
-            topic=topic, level=level, feedback=feedback, raw_response=response
+        output, response = await generate_structured_with_response(
+            self._llm,
+            prompt,
+            EvaluationLLMOutput,
+            system_prompt=_SYSTEM_PROMPT,
         )
+        return output.to_evaluation(topic=topic, raw_response=response)
 
     def _build_prompt(
         self, question: str, answer: str, rubric: Rubric, chunks: list[Chunk]
@@ -63,51 +77,8 @@ class EvaluatorAgent:
         context_text = "\n".join(f"- {c.text} (fonte: {c.source})" for c in chunks)
 
         return (
-            "Você é um avaliador técnico de entrevistas de system design.\n\n"
             f"Pergunta feita ao candidato:\n{question}\n\n"
             f"Resposta do candidato:\n{answer}\n\n"
             f"Critérios de avaliação para este tópico:\n{criteria_text}\n\n"
-            f"Material de referência:\n{context_text}\n\n"
-            "Priorize correção sobre completude. Resposta correta mas incompleta = "
-            "MÉDIA. FORTE = correta com pelo menos um detalhe relevante além do "
-            "básico. Não exija cobrir todos os trade-offs do material de referência.\n\n"
-            "Classifique a resposta como FRACA, MEDIA ou FORTE, e justifique.\n"
-            "Responda exatamente neste formato:\n"
-            "NIVEL: <FRACA|MEDIA|FORTE>\n"
-            "FEEDBACK: <justificativa em até 3 frases>"
+            f"Material de referência:\n{context_text}"
         )
-
-    def _log_parse_failure(
-        self, topic: str, has_level: bool, has_feedback: bool
-    ) -> None:
-        logger.warning(
-            "Evaluation response parse failed",
-            extra={
-                "topic": topic,
-                "has_level": has_level,
-                "has_feedback": has_feedback,
-            },
-        )
-
-    def _parse_response(self, text: str, *, topic: str) -> tuple[str, str]:
-        level: str | None = None
-        feedback: str | None = None
-        for line in text.splitlines():
-            if line.upper().startswith("NIVEL:"):
-                raw = line.split(":", 1)[1].strip().upper()
-                level = _LEVEL_MAP.get(raw)
-            elif line.upper().startswith("FEEDBACK:"):
-                feedback = line.split(":", 1)[1].strip()
-
-        has_level = level is not None
-        has_feedback = feedback is not None
-
-        if level is None:
-            self._log_parse_failure(topic, has_level, has_feedback)
-            raise EvaluationParseError(
-                "Resposta do avaliador sem NIVEL válido (FRACA|MEDIA|FORTE)."
-            )
-        if feedback is None:
-            self._log_parse_failure(topic, has_level, has_feedback)
-            raise EvaluationParseError("Resposta do avaliador sem FEEDBACK.")
-        return level, feedback

@@ -113,5 +113,5 @@ async def test_submit_answer_after_reload_matches_memory_flow(
     assert db_after.difficulty == memory_after.difficulty
     assert db_after.current_question.id == memory_after.current_question.id
     assert db_after.history[0][0].id == memory_after.history[0][0].id
-    assert db_after.history[0][1].level == memory_after.history[0][1].level
+    assert db_after.history[0][1].score == memory_after.history[0][1].score
     assert db_after.history[0][1].feedback == memory_after.history[0][1].feedback

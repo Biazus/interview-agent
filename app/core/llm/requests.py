@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 DEFAULT_SYSTEM_PROMPT = "You are an interviewer assistant."
-DEFAULT_MAX_OUTPUT_TOKENS = 1024
+DEFAULT_MAX_OUTPUT_TOKENS = 2048
 
 
 @dataclass(frozen=True)

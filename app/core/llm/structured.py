@@ -5,7 +5,7 @@ from typing import TypeVar
 from pydantic import BaseModel, ValidationError
 
 from app.core.llm.exceptions import StructuredOutputError
-from app.core.llm.interfaces import LLMProvider
+from app.core.llm.interfaces import LLMProvider, LLMResponse
 from app.core.llm.requests import DEFAULT_MAX_OUTPUT_TOKENS, GenerateRequest
 
 logger = logging.getLogger(__name__)
@@ -33,17 +33,14 @@ def _log_structured_failure(schema: str, error_msg: str) -> None:
     )
 
 
-async def generate_structured(
-    llm: LLMProvider,
+def _build_request(
     prompt: str,
-    output_model: type[T],
     *,
     system_prompt: str | None = None,
     temperature: float | None = None,
     max_output_tokens: int | None = None,
     model: str | None = None,
-) -> T:
-    """Gera saída JSON via LLM e valida contra um modelo Pydantic."""
+) -> GenerateRequest:
     request_kwargs: dict = {
         "prompt": prompt,
         "response_format": _JSON_OBJECT_FORMAT,
@@ -55,11 +52,10 @@ async def generate_structured(
         request_kwargs["temperature"] = temperature
     if model is not None:
         request_kwargs["model"] = model
+    return GenerateRequest(**request_kwargs)
 
-    request = GenerateRequest(**request_kwargs)
-    response = await llm.generate(request)
 
-    raw = (response.text or "").strip()
+def _parse_structured_response(raw: str, output_model: type[T]) -> T:
     if not raw:
         error = StructuredOutputError("LLM retornou resposta vazia.")
         _log_structured_failure(output_model.__name__, str(error))
@@ -77,3 +73,50 @@ async def generate_structured(
         error = StructuredOutputError(f"Resposta não é JSON válido: {exc}")
         _log_structured_failure(output_model.__name__, str(exc))
         raise error from exc
+
+
+async def generate_structured_with_response(
+    llm: LLMProvider,
+    prompt: str,
+    output_model: type[T],
+    *,
+    system_prompt: str | None = None,
+    temperature: float | None = None,
+    max_output_tokens: int | None = None,
+    model: str | None = None,
+) -> tuple[T, LLMResponse]:
+    """Gera saída JSON via LLM e valida contra um modelo Pydantic, retornando também a resposta bruta."""
+    request = _build_request(
+        prompt,
+        system_prompt=system_prompt,
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+        model=model,
+    )
+    response = await llm.generate(request)
+    raw = (response.text or "").strip()
+    parsed = _parse_structured_response(raw, output_model)
+    return parsed, response
+
+
+async def generate_structured(
+    llm: LLMProvider,
+    prompt: str,
+    output_model: type[T],
+    *,
+    system_prompt: str | None = None,
+    temperature: float | None = None,
+    max_output_tokens: int | None = None,
+    model: str | None = None,
+) -> T:
+    """Gera saída JSON via LLM e valida contra um modelo Pydantic."""
+    model_result, _ = await generate_structured_with_response(
+        llm,
+        prompt,
+        output_model,
+        system_prompt=system_prompt,
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+        model=model,
+    )
+    return model_result

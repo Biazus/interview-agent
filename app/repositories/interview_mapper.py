@@ -76,7 +76,7 @@ def _evaluation_response_from_turn(turn: Any) -> LLMResponse:
 def _evaluation_from_turn(turn: Any) -> Evaluation:
     return Evaluation(
         topic=_attr(turn, "question_topic"),
-        level=_attr(turn, "evaluation_level"),
+        score=_attr(turn, "evaluation_score"),
         feedback=_attr(turn, "evaluation_feedback"),
         raw_response=_evaluation_response_from_turn(turn),
     )

@@ -61,7 +61,7 @@ async def main() -> None:
         state = await orchestrator.submit_answer(state, answer)
 
         last_question, last_evaluation = state.history[-1]
-        print(f"  -> Nível avaliado: {last_evaluation.level}")
+        print(f"  -> Nota avaliada: {last_evaluation.score}")
         print(f"  -> Feedback: {last_evaluation.feedback}")
 
         if state.finished:
@@ -73,7 +73,7 @@ async def main() -> None:
 
     print(f"\nTotal de perguntas respondidas: {len(state.history)}")
     for idx, (question, evaluation) in enumerate(state.history, start=1):
-        print(f"{idx}. [{question.topic} / nível={evaluation.level}] {question.prompt}")
+        print(f"{idx}. [{question.topic} / nota={evaluation.score}] {question.prompt}")
 
     if state.finished:
         print("\n[RELATÓRIO] Gerando relatório final...\n")

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import threading
 from unittest.mock import AsyncMock, MagicMock
 
@@ -24,7 +25,7 @@ def evaluator(
     llm = MagicMock()
     llm.generate = AsyncMock(
         return_value=LLMResponse(
-            text="NIVEL: FORTE\nFEEDBACK: Boa resposta.",
+            text=json.dumps({"score": 85, "feedback": "Boa resposta."}),
             provider="test",
             model="test",
         )
@@ -45,7 +46,7 @@ async def test_evaluate_returns_parsed_evaluation(
     )
 
     assert result.topic == "dead_letter_queue"
-    assert result.level == "strong"
+    assert result.score == 85
     assert result.feedback == "Boa resposta."
     assert result.raw_response.provider == "test"
 
@@ -64,7 +65,7 @@ async def test_evaluate_does_not_block_event_loop(
     llm = MagicMock()
     llm.generate = AsyncMock(
         return_value=LLMResponse(
-            text="NIVEL: MEDIA\nFEEDBACK: ok",
+            text=json.dumps({"score": 55, "feedback": "ok"}),
             provider="test",
             model="test",
         )
@@ -89,5 +90,5 @@ async def test_evaluate_does_not_block_event_loop(
 
     gate.set()
     result = await evaluate_task
-    assert result.level == "medium"
+    assert result.score == 55
     assert result.feedback == "ok"

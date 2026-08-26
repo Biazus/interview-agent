@@ -51,6 +51,8 @@ async def test_second_active_interview_raises_integrity_error(
 async def test_duplicate_turn_number_raises_integrity_error(
     repository, candidate_id, require_postgres
 ):
+    # Requer migration level→score (coluna evaluation_score).
+    # Falha até o executor aplicar a migration e atualizar InterviewRepository.
     interview_id = await repository.create_interview(
         candidate_id=candidate_id,
         domain="async_messaging",
@@ -68,11 +70,11 @@ async def test_duplicate_turn_number_raises_integrity_error(
         "question_difficulty": 1,
         "question_prompt": "O que é uma DLQ?",
         "answer_text": "resposta",
-        "evaluation_level": "medium",
+        "evaluation_score": 55,
         "evaluation_feedback": "ok",
         "evaluation_provider": "fake",
         "evaluation_model": "test",
-        "evaluation_raw_response": {"text": "NIVEL: MEDIA"},
+        "evaluation_raw_response": {"text": '{"score": 55, "feedback": "ok"}'},
     }
 
     await repository.add_turn(interview_id=interview_id, turn_number=0, **turn_payload)

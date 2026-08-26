@@ -5,6 +5,7 @@ import pytest
 from pydantic import BaseModel, Field
 
 from app.core.llm.exceptions import StructuredOutputError
+from app.core.llm.interfaces import LLMResponse
 from app.core.llm.requests import DEFAULT_MAX_OUTPUT_TOKENS, GenerateRequest
 from app.core.llm.structured import generate_structured
 
@@ -52,3 +53,51 @@ async def test_generate_structured_raises_on_empty_response():
 
     with pytest.raises(StructuredOutputError):
         await generate_structured(llm, "prompt", _SampleOutput)
+
+
+@pytest.mark.asyncio
+async def test_generate_structured_with_response_returns_model_and_llm_response():
+    from app.core.llm.structured import generate_structured_with_response
+
+    llm = MagicMock()
+    payload = _SampleOutput(resumo="ok", items=["a", "b"])
+    llm_response = LLMResponse(
+        text=json.dumps(payload.model_dump()),
+        provider="groq",
+        model="llama-test",
+        tokens_used=10,
+    )
+    llm.generate = AsyncMock(return_value=llm_response)
+
+    model, response = await generate_structured_with_response(
+        llm, "prompt", _SampleOutput
+    )
+
+    assert model.resumo == "ok"
+    assert model.items == ["a", "b"]
+    assert response is llm_response
+    assert response.provider == "groq"
+
+
+@pytest.mark.asyncio
+async def test_generate_structured_delegates_and_returns_only_model(monkeypatch):
+    expected_model = _SampleOutput(resumo="delegado", items=["x"])
+    expected_response = LLMResponse(
+        text='{"resumo": "delegado", "items": ["x"]}',
+        provider="test",
+        model="test",
+    )
+
+    async def fake_with_response(*args, **kwargs):
+        return expected_model, expected_response
+
+    monkeypatch.setattr(
+        "app.core.llm.structured.generate_structured_with_response",
+        fake_with_response,
+    )
+
+    llm = MagicMock()
+    result = await generate_structured(llm, "prompt", _SampleOutput)
+
+    assert result == expected_model
+    assert result.resumo == "delegado"

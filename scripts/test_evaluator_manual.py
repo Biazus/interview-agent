@@ -20,11 +20,11 @@ async def main() -> None:
 
     evaluation = await agent.evaluate(
         topic="dead_letter_queue",  # ajuste para o tópico que você populou
-        question="O que é uma Dead Letter Queue e quando ela deveria ser usada?",
-        answer="É uma fila que guarda mensagens que falharam depois de várias tentativas.",
+        question="O que é o parâmetro BatchSize na configuração de um Event Source Mapping entre SQS e Lambda?",
+        answer="O parâmetro BatchSize define o número máximo de mensagens que o poller do AWS Lambda lê de uma fila do Amazon SQS em uma única operação e envia de uma só vez para a sua função Lambda",
     )
 
-    print(f"Nível: {evaluation.level}")
+    print(f"Nota: {evaluation.score}")
     print(f"Feedback: {evaluation.feedback}")
     print(f"Provider usado: {evaluation.raw_response.provider}")
     print(f"Tokens: {evaluation.raw_response.tokens_used}")
