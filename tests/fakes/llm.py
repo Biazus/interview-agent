@@ -1,3 +1,5 @@
+import json
+
 from app.agents.reporting_schema import ReportLLMOutput
 from app.core.llm.interfaces import LLMResponse
 from app.core.llm.requests import GenerateRequest
@@ -8,10 +10,14 @@ class DeterministicLLM:
 
     def __init__(
         self,
-        evaluation_text: str = "NIVEL: FORTE\nFEEDBACK: Boa resposta estruturada.",
+        evaluation_score: int = 85,
+        evaluation_feedback: str = "Boa resposta estruturada.",
         report: ReportLLMOutput | None = None,
     ) -> None:
-        self._evaluation_text = evaluation_text
+        self._evaluation_payload = {
+            "score": evaluation_score,
+            "feedback": evaluation_feedback,
+        }
         self._report = report or ReportLLMOutput(
             resumo="Desempenho sólido no tópico.",
             pontos_fortes=["Boa clareza"],
@@ -29,14 +35,29 @@ class DeterministicLLM:
                 model="deterministic-report",
             )
         return LLMResponse(
-            text=self._evaluation_text,
+            text=json.dumps(self._evaluation_payload),
             provider="fake",
             model="deterministic-eval",
         )
 
 
 class FailingEvaluationLLM(DeterministicLLM):
-    """Retorna texto sem NIVEL válido — para testar EvaluationParseError."""
+    """Retorna JSON inválido — para testar StructuredOutputError."""
 
     def __init__(self) -> None:
-        super().__init__(evaluation_text="Resposta sem formato esperado.")
+        super().__init__()
+        self._evaluation_payload = "not-json"
+
+    async def generate(self, request: GenerateRequest) -> LLMResponse:
+        self.generate_calls.append(request)
+        if "Relator de entrevistas" in (request.system_prompt or ""):
+            return LLMResponse(
+                text=self._report.model_dump_json(),
+                provider="fake",
+                model="deterministic-report",
+            )
+        return LLMResponse(
+            text=str(self._evaluation_payload),
+            provider="fake",
+            model="deterministic-eval",
+        )

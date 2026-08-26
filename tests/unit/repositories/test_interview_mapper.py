@@ -17,13 +17,13 @@ def _question(
     return Question(id=id, topic=topic, difficulty=difficulty, prompt=prompt)
 
 
-def _evaluation(level: str = "strong", feedback: str = "Boa resposta.") -> Evaluation:
+def _evaluation(score: int = 85, feedback: str = "Boa resposta.") -> Evaluation:
     return Evaluation(
         topic="dead_letter_queue",
-        level=level,
+        score=score,
         feedback=feedback,
         raw_response=LLMResponse(
-            text=f"NIVEL: {level.upper()}\nFEEDBACK: {feedback}",
+            text=f'{{"score": {score}, "feedback": "{feedback}"}}',
             provider="groq",
             model="llama-test",
             tokens_used=15,
@@ -60,7 +60,7 @@ def _turn_row(
         question_difficulty=question.difficulty,
         question_prompt=question.prompt,
         answer_text=answer,
-        evaluation_level=evaluation.level,
+        evaluation_score=evaluation.score,
         evaluation_feedback=evaluation.feedback,
         evaluation_provider=evaluation.raw_response.provider,
         evaluation_model=evaluation.raw_response.model,
@@ -83,8 +83,8 @@ def test_to_state_active_interview_restores_current_question():
 def test_to_state_after_n_turns_preserves_history_length_and_order():
     q1 = _question(id="sqs-01")
     q2 = _question(id="sqs-05", difficulty=2, prompt="Como configurar redrive?")
-    ev1 = _evaluation(level="medium", feedback="Parcial.")
-    ev2 = _evaluation(level="strong", feedback="Completa.")
+    ev1 = _evaluation(score=55, feedback="Parcial.")
+    ev2 = _evaluation(score=85, feedback="Completa.")
     interview = _active_interview_row(q2)
     interview.questions_answered = 2
     turns = [
@@ -97,7 +97,7 @@ def test_to_state_after_n_turns_preserves_history_length_and_order():
     assert len(state.history) == 2
     assert state.history[0][0].id == "sqs-01"
     assert state.history[1][0].id == "sqs-05"
-    assert state.history[0][1].level == "medium"
+    assert state.history[0][1].score == 55
     assert state.history[1][1].feedback == "Completa."
 
 
@@ -128,7 +128,7 @@ def test_finished_state_api_mapping_omits_current_question():
 
 
 def test_evaluation_raw_response_jsonb_round_trip():
-    evaluation = _evaluation()
+    evaluation = _evaluation(score=72)
     payload = interview_mapper.evaluation_to_jsonb(evaluation)
 
     restored = interview_mapper.evaluation_from_jsonb(payload)

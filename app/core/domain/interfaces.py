@@ -43,7 +43,7 @@ class RubricCriterion:
 @dataclass(frozen=True)
 class Evaluation:
     topic: str
-    level: str  # "weak" | "medium" | "strong"
+    score: int  # 1–100
     feedback: str
     raw_response: LLMResponse  # qual provider respondeu, tokens, etc.
 

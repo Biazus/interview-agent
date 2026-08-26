@@ -71,6 +71,7 @@ Logs: `docker compose logs -f api`
 
 You do **not** need to run migrations or start Uvicorn manually when using Docker. You **do** need to run the seed job once before starting interviews (or after RAG data changes). `POST /interviews` returns **503** `RAG_NOT_READY` if Qdrant is empty or stale.
 
+
 ## Local tooling (uv)
 
 Install [uv](https://docs.astral.sh/uv/) on the host for tests, lint, and Alembic outside Docker:

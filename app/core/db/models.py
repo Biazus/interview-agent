@@ -122,7 +122,7 @@ class InterviewTurn(Base):
     question_difficulty: Mapped[int] = mapped_column(Integer, nullable=False)
     question_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     answer_text: Mapped[str] = mapped_column(Text, nullable=False)
-    evaluation_level: Mapped[str] = mapped_column(String(16), nullable=False)
+    evaluation_score: Mapped[int] = mapped_column(Integer, nullable=False)
     evaluation_feedback: Mapped[str] = mapped_column(Text, nullable=False)
     evaluation_provider: Mapped[str] = mapped_column(String(64), nullable=False)
     evaluation_model: Mapped[str] = mapped_column(String(128), nullable=False)

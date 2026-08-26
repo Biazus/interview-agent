@@ -100,7 +100,7 @@ def test_selector_pick_next_topic_skips_visited_topics(
     dlq_q = question_bank.next_question("dead_letter_queue", 1)
     ev = Evaluation(
         topic="dead_letter_queue",
-        level="weak",
+        score=25,
         feedback="fb",
         raw_response=LLMResponse(text="", provider="t", model="t"),
     )
@@ -129,7 +129,7 @@ async def test_submit_answer_advances_state_with_mocked_llm(
 
     assert len(new_state.history) == 1
     assert new_state.history[0][0].id == first_question_id
-    assert new_state.history[0][1].level == "strong"
+    assert new_state.history[0][1].score == 85
     assert new_state.finished is False
     assert new_state.current_question.id != first_question_id
 
@@ -155,7 +155,7 @@ async def test_get_report_returns_candidate_report_when_finished(
             state.current_question,
             Evaluation(
                 topic=state.topic,
-                level="strong",
+                score=85,
                 feedback="Boa resposta.",
                 raw_response=LLMResponse(text="", provider="fake", model="test"),
             ),

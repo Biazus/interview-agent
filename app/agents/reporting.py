@@ -45,7 +45,7 @@ class ReportingAgent:
         lines = []
         for i, (question, evaluation) in enumerate(history, start=1):
             lines.append(
-                f"{i}. [{question.topic}] nível={evaluation.level} | "
+                f"{i}. [{question.topic}] nota={evaluation.score} | "
                 f"feedback: {evaluation.feedback}"
             )
         return "\n".join(lines)
