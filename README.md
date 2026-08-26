@@ -1,3 +1,4 @@
+
 # Interview Agent
 
 An AI-powered technical interview platform. Candidates authenticate via a REST API, run adaptive interviews grounded in domain knowledge (RAG), and receive structured reports. Behind the scenes, agents orchestrate question selection, retrieval-augmented context, and rubric-based evaluation.
@@ -13,6 +14,8 @@ An AI-powered technical interview platform. Candidates authenticate via a REST A
 - **Rubric provider** — criteria for scoring answers (weak / medium / strong examples)
 
 A central **registry** wires domains at startup. The orchestrator picks a domain, asks questions, retrieves context, and uses an LLM (Groq with OpenRouter fallback) to evaluate answers.
+
+<img width="811" height="811" alt="arc" src="https://github.com/user-attachments/assets/8af5d093-d0f5-4da2-b869-895fe7e13ae5" />
 
 ## Stack
 
