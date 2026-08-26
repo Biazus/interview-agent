@@ -1,5 +1,6 @@
 import asyncio
 
+import app.bootstrap  # noqa: F401 — registra domínios antes de get_domain
 from app.agents.evaluator import EvaluatorAgent
 from app.core.domain.registry import DomainEnum, get_domain
 from app.core.llm.fallback import FallbackLLMProvider
