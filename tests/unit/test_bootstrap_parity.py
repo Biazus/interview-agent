@@ -24,7 +24,7 @@ def test_run_seed_and_main_share_same_registered_domains():
     assert (
         bootstrap_domains_from_seed
         == bootstrap_domains_from_main
-        == {"async_messaging"}
+        == {"async_messaging", "python_basics"}
     )
 
 
