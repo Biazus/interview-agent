@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
+import app.bootstrap  # noqa: F401 — registra domínios ao importar (antes do lifespan)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -21,10 +22,13 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     configure_logging(settings.LOG_LEVEL)
 
-    # Startup: registra todos os domínios disponíveis
-    import app.bootstrap
+    from app import bootstrap
 
-    app.bootstrap.bootstrap_domains()
+    bootstrap.bootstrap_domains()
+    logger.info(
+        "Domains registered at startup",
+        extra={"domains": list_registered_domains()},
+    )
 
     for domain_value in list_registered_domains():
         domain = DomainEnum(domain_value)

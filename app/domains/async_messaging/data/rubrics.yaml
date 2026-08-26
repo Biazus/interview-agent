@@ -1,69 +1,42 @@
 - topic: dead_letter_queue
   criteria:
     - description: "Explica o propósito de uma DLQ"
-      weak_example: "Não sei, acho que guarda mensagens."
-      medium_example: "Guarda mensagens que deram erro."
-      strong_example: "Captura mensagens que excederam o número máximo de
-        tentativas (maxReceiveCount), permitindo análise sem bloquear a fila
-        principal."
+      weak_example: "Não sei / acho que é só outra fila qualquer."
+      medium_example: "Fila para mensagens que falharam no processamento, separadas da fila principal."
+      strong_example: "Isola mensagens que não puderam ser processadas após retries, evitando reprocessamento infinito e permitindo investigação."
     - description: "Relaciona DLQ com maxReceiveCount"
       weak_example: "A DLQ tem um limite de tentativas."
-      medium_example: "Depois de X tentativas falhas, a mensagem vai pra DLQ."
-      strong_example: "O maxReceiveCount define quantas vezes a mensagem
-        pode voltar a ficar visível antes de ser movida automaticamente para
-        a DLQ associada; mal configurado (muito baixo), pode mover mensagens
-        válidas prematuramente; muito alto, atrasa a detecção de falhas
-        reais."
+      medium_example: "Após N recebimentos sem delete, o SQS move a mensagem para a DLQ."
+      strong_example: "O maxReceiveCount na redrive policy define esse N; mal configurado pode mandar mensagens válidas cedo demais ou atrasar detecção de poison messages."
 
 - topic: visibility_timeout
   criteria:
     - description: "Explica o que é visibility timeout"
       weak_example: "É um tempo de espera da fila."
-      medium_example: "É o tempo que a mensagem fica invisível enquanto é
-        processada."
-      strong_example: "É o intervalo em que uma mensagem, após ser
-        recebida por um consumidor, fica invisível para outros consumidores
-        na fila, evitando processamento duplicado enquanto o processamento
-        original está em andamento."
+      medium_example: "Tempo em que a mensagem fica invisível para outros consumidores depois de ser recebida."
+      strong_example: "Evita que dois consumidores processem a mesma mensagem ao mesmo tempo, enquanto o primeiro ainda não deletou."
     - description: "Identifica o risco de mal dimensionar o timeout"
       weak_example: "Se for muito curto, dá erro."
-      medium_example: "Se for muito curto, outro consumidor pode pegar a
-        mesma mensagem de novo."
-      strong_example: "Um timeout menor que o tempo real de processamento
-        causa reentrega e processamento duplicado; um timeout muito longo
-        atrasa a recuperação de mensagens cujo consumidor falhou de fato."
+      medium_example: "Se for menor que o tempo de processamento, a mensagem pode ser entregue de novo."
+      strong_example: "Timeout curto demais causa processamento duplicado; longo demais atrasa reentrega quando o consumidor cai de fato."
 
 - topic: fan_out
   criteria:
     - description: "Explica o padrão fan-out com SNS + SQS"
       weak_example: "Manda a mensagem pra várias filas."
-      medium_example: "Um tópico SNS envia a mesma mensagem para várias
-        filas SQS inscritas."
-      strong_example: "O padrão fan-out combina um tópico SNS com múltiplas
-        filas SQS inscritas nele, permitindo que um único evento publicado
-        seja distribuído para múltiplos consumidores independentes, cada um
-        processando a mensagem em seu próprio ritmo e isoladamente dos
-        demais."
+      medium_example: "SNS publica uma vez; várias filas SQS inscritas recebem cópias independentes."
+      strong_example: "Cada fila processa no seu ritmo; falha/isolamento em uma não derruba as outras."
 
 - topic: batch_processing
   criteria:
     - description: "Explica o benefício de processar mensagens em lote"
       weak_example: "É mais rápido processar várias de uma vez."
-      medium_example: "Reduz o número de chamadas à API, economizando
-        custo."
-      strong_example: "Processar mensagens em lote reduz o número de
-        chamadas de API (e portanto custo e overhead de rede), mas introduz
-        trade-offs: uma falha parcial no lote exige lógica de tratamento
-        granular (identificar quais itens do lote falharam) em vez de
-        simplesmente falhar a mensagem inteira."
+      medium_example: "Menos chamadas de API, menor custo e overhead."
+      strong_example: "Ganho de throughput/custo, mas exige cuidado com falhas parciais no lote (ex.: partial batch response no Lambda)."
 
 - topic: lambda_retry
   criteria:
     - description: "Como funcionam os retries do Lambda e por que usar idempotência?"
       weak_example: "O Lambda tenta executar a função novamente quando ocorre um erro."
-      medium_example: "Os retries recuperam falhas temporárias, mas podem fazer o mesmo
-        evento ser processado mais de uma vez."
-      strong_example: "O Lambda pode repetir um evento após uma falha, por isso o 
-        processamento deve ser idempotente para evitar efeitos duplicados. Também 
-        é necessário definir limites de tentativas, backoff e uma estratégia para 
-        falhas persistentes, como uma DLQ ou destino de falha."
+      medium_example: "Lambda reexecuta após falha; o mesmo evento pode ser processado mais de uma vez."
+      strong_example: "Por isso o handler deve ser idempotente; para falhas persistentes usa-se DLQ ou destination on failure."
