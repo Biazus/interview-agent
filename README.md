@@ -49,7 +49,7 @@ docker compose --profile seed run --rm seed
 docker compose up -d api
 ```
 
-The seed job loads domain knowledge into Qdrant (embeddings may take a minute on first run). Data persists in the `qdrant_data` volume — you only need to re-run seed after embedder or manifest changes (see [docs/current_plan.md](docs/current_plan.md) PR2 runbook).
+The seed job loads domain knowledge into Qdrant (embeddings may take a minute on first run). Data persists in the `qdrant_data` volume — you only need to re-run seed after embedder or manifest changes.
 
 **Later restarts** (volumes intact): `docker compose up -d` is enough.
 
@@ -219,5 +219,4 @@ New domains (Kafka, RabbitMQ, etc.) can be added by implementing the three inter
 
 ## Further reading
 
-- [docs/current_plan.md](docs/current_plan.md) — PR2 seed job, manifest, and `RAG_NOT_READY` runbook
 - [docs/todo.md](docs/todo.md) — dependency audit and follow-up backlog

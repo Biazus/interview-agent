@@ -88,15 +88,11 @@ def get_cached_domain(domain: DomainEnum) -> DomainModule:
 
 def get_domain(domain: DomainEnum) -> DomainModule:
     """Resolve e instancia o módulo de domínio solicitado.
-    ps.: aqui chamamos factory() a cada invocação, ou seja, cada chamada gera
-    uma nova instância dos objetos concretos. Isso é intencional por enquanto
-    (mantém o registry sem estado e sem se preocupar com singleton),
-    mas na prática, coisas como o RAGRetriever provavelmente vão querer manter
-    uma conexão/cliente já aberto com o vector DB reutilizado entre chamadas.
-    Vamos resolver isso com um cache simples (ex: functools.lru_cache na factory,
-    ou um singleton controlado pelo próprio main.py do FastAPI via Depends)
-    quando conectarmos isso ao FastAPI. Não é um problema no domínio isolado
-    que estamos construindo agora.
+
+    Chama factory() a cada invocação. Para reutilização entre chamadas no mesmo
+    processo, use get_cached_domain (cache por DomainEnum). Recursos pesados
+    (ex.: QdrantRetriever) já são cacheados nas factories via @lru_cache
+    (ver get_qdrant_retriever).
     """
     factory = _registry.get(domain)
     if factory is None:

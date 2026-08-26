@@ -12,6 +12,14 @@ const DIFFICULTY_OPTIONS = [1, 2, 3, 4, 5].map((level) => ({
   label: `Nível ${level}`,
 }))
 
+const RAG_SEED_HINT =
+  'Execute: docker compose --profile seed run --rm seed — ou: uv run python scripts/run_seed.py'
+
+type SubmitError = {
+  detail: string
+  hint?: string
+}
+
 export function SetupPage() {
   const client = useApiClient()
   const navigate = useNavigate()
@@ -31,7 +39,7 @@ export function SetupPage() {
   const [isLoadingTopics, setIsLoadingTopics] = useState(false)
   const [domainsError, setDomainsError] = useState<Error | null>(null)
   const [topicsError, setTopicsError] = useState<Error | null>(null)
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<SubmitError | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const topicsFetchIdRef = useRef(0)
@@ -137,19 +145,23 @@ export function SetupPage() {
           const recovered = await getActiveInterview(client)
           await refetchActive()
           if (recovered === null) {
-            setSubmitError(
-              'Já existe uma entrevista ativa, mas não foi possível recuperá-la. Tente novamente.',
-            )
+            setSubmitError({
+              detail:
+                'Já existe uma entrevista ativa, mas não foi possível recuperá-la. Tente novamente.',
+            })
           }
         } catch {
-          setSubmitError(
-            'Já existe uma entrevista ativa, mas não foi possível recuperá-la. Tente novamente.',
-          )
+          setSubmitError({
+            detail:
+              'Já existe uma entrevista ativa, mas não foi possível recuperá-la. Tente novamente.',
+          })
         }
       } else if (err instanceof ApiError && err.code === 'RAG_NOT_READY') {
-        setSubmitError(err.detail)
+        setSubmitError({ detail: err.detail, hint: RAG_SEED_HINT })
       } else {
-        setSubmitError('Não foi possível iniciar a entrevista. Tente novamente.')
+        setSubmitError({
+          detail: 'Não foi possível iniciar a entrevista. Tente novamente.',
+        })
       }
     } finally {
       setIsSubmitting(false)
@@ -267,7 +279,14 @@ export function SetupPage() {
         disabled={isSubmitting}
       />
 
-      {submitError !== null && <ErrorAlert message={submitError} />}
+      {submitError !== null && (
+        <div className="space-y-1">
+          <ErrorAlert message={submitError.detail} />
+          {submitError.hint !== undefined && (
+            <p className="text-sm text-gray-600">{submitError.hint}</p>
+          )}
+        </div>
+      )}
 
       <div className="flex justify-center">
         <Button onClick={() => void handleStart()} disabled={!canStart} isLoading={isSubmitting}>

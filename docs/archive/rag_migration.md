@@ -82,5 +82,3 @@ Values below 0.999 suggest a broken or incompatible model configuration.
 - **GO** — proceed to PR1 (fastembed production swap + golden CI)
 - **NO-GO** — investigate model mismatch, golden query wording, or seed content;
   do not proceed to PR1 until M1–M4 pass
-
-See also: [`docs/adr/ADR-005-qdrant-seed-strategy.md`](../adr/ADR-005-qdrant-seed-strategy.md)
