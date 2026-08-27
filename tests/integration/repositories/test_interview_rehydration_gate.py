@@ -2,6 +2,7 @@ import pytest
 
 from app.agents.orchestrator import OrchestratorAgent
 from app.agents.selector_naive import NaiveSelector
+from app.core.domain.static_providers import StaticQuestionBank
 from app.core.domain.registry import (
     DomainEnum,
     DomainModule,
@@ -9,7 +10,7 @@ from app.core.domain.registry import (
     get_domain,
     register_domain,
 )
-from app.domains.async_messaging.question_bank import StaticAsyncMessagingQuestionBank
+from app.domains.async_messaging.question_bank import _DATA_PATH
 from app.domains.async_messaging.rag_config import build_rag_config
 from app.domains.async_messaging.rubrics import StaticAsyncMessagingRubricProvider
 from app.repositories import interview_mapper
@@ -21,7 +22,10 @@ from tests.fakes.retriever import FakeRAGRetriever
 def registered_fake_domain() -> DomainModule:
     clear_registry()
     retriever = FakeRAGRetriever()
-    question_bank = StaticAsyncMessagingQuestionBank()
+    question_bank = StaticQuestionBank(
+        _DATA_PATH,
+        candidate_selector=lambda candidates: candidates[0],
+    )
     rubric_provider = StaticAsyncMessagingRubricProvider()
 
     def factory() -> DomainModule:
@@ -87,19 +91,19 @@ async def test_submit_answer_after_reload_matches_memory_flow(
     answer = "DLQ armazena mensagens que falharam após retries."
 
     memory_state = orchestrator.start("dead_letter_queue", difficulty=1)
-    memory_after = await orchestrator.submit_answer(memory_state, answer)
 
-    db_start = orchestrator.start("dead_letter_queue", difficulty=1)
     interview_id = await repository.create_interview(
         candidate_id=candidate_id,
         domain="async_messaging",
-        topic=db_start.topic,
-        difficulty=db_start.difficulty,
-        current_question_id=db_start.current_question.id,
-        current_question_topic=db_start.current_question.topic,
-        current_question_difficulty=db_start.current_question.difficulty,
-        current_question_prompt=db_start.current_question.prompt,
+        topic=memory_state.topic,
+        difficulty=memory_state.difficulty,
+        current_question_id=memory_state.current_question.id,
+        current_question_topic=memory_state.current_question.topic,
+        current_question_difficulty=memory_state.current_question.difficulty,
+        current_question_prompt=memory_state.current_question.prompt,
     )
+
+    memory_after = await orchestrator.submit_answer(memory_state, answer)
 
     interview = await repository.get_by_id_for_candidate(interview_id, candidate_id)
     turns = await repository.get_turns(interview_id)

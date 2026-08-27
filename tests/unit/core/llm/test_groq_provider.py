@@ -25,7 +25,7 @@ async def test_generate_returns_llm_response():
     assert result.tokens_used == 42
 
     call_kwargs = client.chat.completions.create.await_args.kwargs
-    assert call_kwargs["max_completion_tokens"] == 1024
+    assert call_kwargs["max_completion_tokens"] == 2048
     assert call_kwargs["messages"][1]["content"] == "qualquer prompt"
 
 

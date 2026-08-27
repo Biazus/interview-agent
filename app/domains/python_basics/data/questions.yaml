@@ -1,0 +1,349 @@
+- id: py-types-01
+  topic: data_types
+  difficulty: 1
+  prompt: "Quais são os tipos built-in mais comuns em Python e como você verificaria o tipo de um valor em tempo de execução?"
+
+- id: py-types-02
+  topic: data_types
+  difficulty: 1
+  prompt: "Qual a diferença entre mutável e imutável em Python? Dê exemplos de tipos de cada categoria."
+
+- id: py-types-03
+  topic: data_types
+  difficulty: 2
+  prompt: "O que é None em Python e como ele se diferencia de 0, False ou uma string vazia?"
+
+- id: py-types-04
+  topic: data_types
+  difficulty: 2
+  prompt: "Explique a diferença entre == e is ao comparar valores em Python."
+
+- id: py-types-05
+  topic: data_types
+  difficulty: 3
+  prompt: "Por que modificar um objeto mutável passado como argumento de função pode afetar o caller, mas modificar um int ou str não?"
+
+- id: py-types-06
+  topic: data_types
+  difficulty: 4
+  prompt: "Como o duck typing influencia o design de funções em Python? Quando você ainda usaria type hints?"
+
+- id: py-types-07
+  topic: data_types
+  difficulty: 5
+  prompt: "Compare quando usar list, tuple, set e dict para modelar dados em memória. Quais trade-offs de performance e semântica considerar?"
+
+- id: py-scope-01
+  topic: variables_scope
+  difficulty: 1
+  prompt: "O que é uma variável em Python e como a atribuição (assignment) funciona?"
+
+- id: py-scope-02
+  topic: variables_scope
+  difficulty: 1
+  prompt: "Qual a diferença entre variável local e global em Python?"
+
+- id: py-scope-03
+  topic: variables_scope
+  difficulty: 2
+  prompt: "O que faz a palavra-chave global dentro de uma função e quando ela é necessária?"
+
+- id: py-scope-04
+  topic: variables_scope
+  difficulty: 2
+  prompt: "O que é LEGB (Local, Enclosing, Global, Built-in) e como Python resolve o nome de uma variável?"
+
+- id: py-scope-05
+  topic: variables_scope
+  difficulty: 3
+  prompt: "Qual a diferença entre global e nonlocal? Em que cenário você usaria nonlocal?"
+
+- id: py-scope-06
+  topic: variables_scope
+  difficulty: 4
+  prompt: "Por que atribuir a uma variável dentro de uma função pode fazer Python tratá-la como local em toda a função, mesmo antes da atribuição?"
+
+- id: py-scope-07
+  topic: variables_scope
+  difficulty: 5
+  prompt: "Como closures capturam variáveis em Python e quais bugs comuns aparecem ao usar variáveis mutáveis em closures?"
+
+- id: py-flow-01
+  topic: control_flow
+  difficulty: 1
+  prompt: "Como você escreve um if/elif/else em Python e qual operador usa para combinar condições?"
+
+- id: py-flow-02
+  topic: control_flow
+  difficulty: 1
+  prompt: "Qual a diferença entre for e while? Quando preferir cada um?"
+
+- id: py-flow-03
+  topic: control_flow
+  difficulty: 2
+  prompt: "O que faz break e continue dentro de um loop? Dê um exemplo de uso de cada um."
+
+- id: py-flow-04
+  topic: control_flow
+  difficulty: 2
+  prompt: "Como o for itera sobre uma sequência em Python? O que é um iterável?"
+
+- id: py-flow-05
+  topic: control_flow
+  difficulty: 3
+  prompt: "O que é o else associado a um loop (for/while else) e quando ele executa?"
+
+- id: py-flow-06
+  topic: control_flow
+  difficulty: 4
+  prompt: "Compare range, enumerate e zip ao iterar dados. Quando cada um é mais apropriado?"
+
+- id: py-flow-07
+  topic: control_flow
+  difficulty: 5
+  prompt: "Como você implementaria um loop com retry e backoff simples em Python sem bibliotecas externas?"
+
+- id: py-func-01
+  topic: functions
+  difficulty: 1
+  prompt: "Como definir e chamar uma função em Python? O que return faz quando não é usado?"
+
+- id: py-func-02
+  topic: functions
+  difficulty: 1
+  prompt: "Qual a diferença entre parâmetros posicionais e parâmetros com valor default?"
+
+- id: py-func-03
+  topic: functions
+  difficulty: 2
+  prompt: "Explique *args e **kwargs e quando usá-los."
+
+- id: py-func-04
+  topic: functions
+  difficulty: 2
+  prompt: "O que são keyword-only arguments em Python 3 e por que existem?"
+
+- id: py-func-05
+  topic: functions
+  difficulty: 3
+  prompt: "Qual a diferença entre passar um argumento mutável como default (ex.: def f(x=[])) e usar None como default?"
+
+- id: py-func-06
+  topic: functions
+  difficulty: 4
+  prompt: "Quando usar functools.partial ou uma closure em vez de uma função com muitos parâmetros opcionais?"
+
+- id: py-func-07
+  topic: functions
+  difficulty: 5
+  prompt: "Como docstrings, type hints e testes se complementam para documentar o contrato de uma função em um projeto real?"
+
+- id: py-coll-01
+  topic: collections
+  difficulty: 1
+  prompt: "Liste as operações básicas de list em Python (adicionar, remover, acessar por índice)."
+
+- id: py-coll-02
+  topic: collections
+  difficulty: 1
+  prompt: "Qual a diferença entre list e tuple? Quando usar cada uma?"
+
+- id: py-coll-03
+  topic: collections
+  difficulty: 2
+  prompt: "Como acessar, adicionar e remover itens em um dict? O que acontece ao acessar uma chave inexistente?"
+
+- id: py-coll-04
+  topic: collections
+  difficulty: 2
+  prompt: "O que é um set em Python e quais operações de conjunto ele suporta?"
+
+- id: py-coll-05
+  topic: collections
+  difficulty: 3
+  prompt: "Compare dict.get(), dict.setdefault() e dict.pop() para lidar com chaves opcionais."
+
+- id: py-coll-06
+  topic: collections
+  difficulty: 4
+  prompt: "Por que dict mantém ordem de inserção em Python 3.7+ e como isso afeta iteração e serialização?"
+
+- id: py-coll-07
+  topic: collections
+  difficulty: 5
+  prompt: "Quando usar collections.Counter, defaultdict ou deque em vez de list/dict nativos?"
+
+- id: py-comp-01
+  topic: comprehensions
+  difficulty: 1
+  prompt: "O que é uma list comprehension e como ela se compara a um loop for com append?"
+
+- id: py-comp-02
+  topic: comprehensions
+  difficulty: 2
+  prompt: "Escreva (ou descreva) uma list comprehension que filtra números pares de uma lista de inteiros."
+
+- id: py-comp-03
+  topic: comprehensions
+  difficulty: 2
+  prompt: "Qual a diferença entre list, dict e set comprehension?"
+
+- id: py-comp-04
+  topic: comprehensions
+  difficulty: 3
+  prompt: "O que é um generator expression e como ele difere de uma list comprehension em memória?"
+
+- id: py-comp-05
+  topic: comprehensions
+  difficulty: 3
+  prompt: "Quando uma comprehension com múltiplos for é legível e quando vira código difícil de manter?"
+
+- id: py-comp-06
+  topic: comprehensions
+  difficulty: 4
+  prompt: "Como yield em uma função generator se relaciona com lazy evaluation e iteração?"
+
+- id: py-comp-07
+  topic: comprehensions
+  difficulty: 5
+  prompt: "Compare map/filter com comprehensions e generator expressions em clareza e performance."
+
+- id: py-exc-01
+  topic: exceptions
+  difficulty: 1
+  prompt: "Como capturar uma exceção em Python com try/except?"
+
+- id: py-exc-02
+  topic: exceptions
+  difficulty: 1
+  prompt: "Qual a diferença entre except Exception e capturar um tipo específico (ex.: ValueError)?"
+
+- id: py-exc-03
+  topic: exceptions
+  difficulty: 2
+  prompt: "O que faz o bloco finally e quando ele executa?"
+
+- id: py-exc-04
+  topic: exceptions
+  difficulty: 2
+  prompt: "Como raise uma exceção e como criar uma exceção customizada simples?"
+
+- id: py-exc-05
+  topic: exceptions
+  difficulty: 3
+  prompt: "O que é EAFP versus LBYL em Python e qual estilo o idioma favorece?"
+
+- id: py-exc-06
+  topic: exceptions
+  difficulty: 4
+  prompt: "Como o with statement se relaciona com exceções e gerenciamento de recursos?"
+
+- id: py-exc-07
+  topic: exceptions
+  difficulty: 5
+  prompt: "Quais práticas evitar ao usar except genérico, pass silencioso ou exceções para fluxo de controle?"
+
+- id: py-class-01
+  topic: classes_basics
+  difficulty: 1
+  prompt: "Como definir uma classe em Python e criar uma instância? O que é self?"
+
+- id: py-class-02
+  topic: classes_basics
+  difficulty: 1
+  prompt: "O que é __init__ e qual sua função na criação de objetos?"
+
+- id: py-class-03
+  topic: classes_basics
+  difficulty: 2
+  prompt: "Qual a diferença entre atributo de instância e atributo de classe?"
+
+- id: py-class-04
+  topic: classes_basics
+  difficulty: 2
+  prompt: "O que são métodos de instância, @classmethod e @staticmethod e quando usar cada um?"
+
+- id: py-class-05
+  topic: classes_basics
+  difficulty: 3
+  prompt: "Explique herança simples em Python e o que super() faz."
+
+- id: py-class-06
+  topic: classes_basics
+  difficulty: 4
+  prompt: "O que são dunder methods (__str__, __repr__, __eq__) e por que importam?"
+
+- id: py-class-07
+  topic: classes_basics
+  difficulty: 5
+  prompt: "Quando uma dataclass ou NamedTuple é melhor que uma classe tradicional para modelar dados?"
+
+- id: py-mod-01
+  topic: modules_imports
+  difficulty: 1
+  prompt: "Como importar um módulo em Python? Diferencie import module e from module import name."
+
+- id: py-mod-02
+  topic: modules_imports
+  difficulty: 1
+  prompt: "O que é __name__ == '__main__' e por que é usado em scripts?"
+
+- id: py-mod-03
+  topic: modules_imports
+  difficulty: 2
+  prompt: "Qual a diferença entre módulo e pacote (package) em Python?"
+
+- id: py-mod-04
+  topic: modules_imports
+  difficulty: 2
+  prompt: "O que faz __init__.py em um pacote e é ele obrigatório em Python 3.3+?"
+
+- id: py-mod-05
+  topic: modules_imports
+  difficulty: 3
+  prompt: "Como imports relativos funcionam dentro de um pacote e quais erros comuns ocorrem?"
+
+- id: py-mod-06
+  topic: modules_imports
+  difficulty: 4
+  prompt: "Explique import circular e estratégias para evitar ou resolver o problema."
+
+- id: py-mod-07
+  topic: modules_imports
+  difficulty: 5
+  prompt: "Como PYTHONPATH, virtualenv e layout de projeto (src layout vs flat) afetam resolução de imports?"
+
+- id: py-io-01
+  topic: file_io
+  difficulty: 1
+  prompt: "Como abrir e ler o conteúdo de um arquivo de texto em Python?"
+
+- id: py-io-02
+  topic: file_io
+  difficulty: 1
+  prompt: "Por que é recomendado usar with open(...) em vez de open() sem context manager?"
+
+- id: py-io-03
+  topic: file_io
+  difficulty: 2
+  prompt: "Qual a diferença entre modo de leitura texto ('r') e binário ('rb')?"
+
+- id: py-io-04
+  topic: file_io
+  difficulty: 2
+  prompt: "Como escrever linhas em um arquivo e garantir que o arquivo seja fechado corretamente?"
+
+- id: py-io-05
+  topic: file_io
+  difficulty: 3
+  prompt: "Como lidar com encoding (UTF-8) ao ler arquivos com caracteres não ASCII?"
+
+- id: py-io-06
+  topic: file_io
+  difficulty: 4
+  prompt: "Compare pathlib.Path com os.path para manipular caminhos de arquivo."
+
+- id: py-io-07
+  topic: file_io
+  difficulty: 5
+  prompt: "Como ler um arquivo grande linha a linha sem carregar tudo na memória? Quando usar json.load vs streaming?"

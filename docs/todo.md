@@ -76,9 +76,6 @@ Severity: **Critical** · **High** · **Medium** · **Low** · **Info**
 - [ ] **[Medium]** `InterviewState` mixes metadata, history, and report (TODO in `app/core/domain/interfaces.py`).  
   **Recommendation:** Split into `InterviewSession` and `InterviewHistory` for cleaner persistence/rehydration.
 
-- [ ] **[Medium]** `StaticAsyncMessagingQuestionBank` always returns `candidates[0]` (TODO line 21) — deterministic, low variety.  
-  **Recommendation:** Randomization or rotation strategy.
-
 - [ ] **[Medium]** `StaticAsyncMessagingRubricProvider` does not nominally implement `RubricProvider` protocol.  
   **Recommendation:** Declare protocol explicitly for contract consistency.
 

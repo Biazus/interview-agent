@@ -31,7 +31,7 @@ def test_get_domain_resolves_registered_domain(
     question = domain.question_bank.next_question(
         topic="dead_letter_queue", difficulty=1
     )
-    assert question.id == "sqs-01"
+    assert question.id in {"sqs-01", "sqs-05"}
 
     rubric = domain.rubric_provider.get_rubric(topic="dead_letter_queue")
     assert len(rubric.criteria) > 0

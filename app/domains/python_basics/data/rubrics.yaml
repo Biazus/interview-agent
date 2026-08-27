@@ -1,0 +1,109 @@
+- topic: data_types
+  criteria:
+    - description: "Identifica tipos built-in comuns e verificação de tipo"
+      weak_example: "Tem int, string e float. Usa typeof ou não sabe verificar."
+      medium_example: "Menciona int, float, str, bool, list, dict; usa type() ou isinstance()."
+      strong_example: "Distingue tipos e usa isinstance() para checagem segura; menciona None como singleton."
+    - description: "Diferencia mutável e imutável"
+      weak_example: "Mutável muda, imutável não muda."
+      medium_example: "list é mutável; int, str e tuple são imutáveis."
+      strong_example: "Explica que imutável não permite alterar o valor interno; mutável compartilha estado se passado por referência."
+
+- topic: variables_scope
+  criteria:
+    - description: "Explica atribuição e resolução de nomes"
+      weak_example: "Variável guarda valor na memória."
+      medium_example: "Atribuição cria referência ao objeto; nomes são resolvidos por escopo."
+      strong_example: "Descreve LEGB e que atribuição não copia objetos mutáveis automaticamente."
+    - description: "Diferencia local, global e nonlocal"
+      weak_example: "Global é fora da função."
+      medium_example: "Local dentro da função; global precisa de global para reatribuir."
+      strong_example: "nonlocal altera variável do escopo enclosing em closures; evita global quando possível."
+
+- topic: control_flow
+  criteria:
+    - description: "Usa condicionais e loops corretamente"
+      weak_example: "if testa verdadeiro; for repete."
+      medium_example: "if/elif/else; for em iteráveis; while com condição; break/continue."
+      strong_example: "Escolhe for vs while com critério; usa enumerate/zip quando apropriado."
+    - description: "Entende iteração em Python"
+      weak_example: "for passa por cada item."
+      medium_example: "for usa iterador; range gera sequência de números."
+      strong_example: "Menciona iterável vs iterator; loop else executa se não houve break."
+
+- topic: functions
+  criteria:
+    - description: "Define funções e parâmetros"
+      weak_example: "def cria função; return devolve valor."
+      medium_example: "Parâmetros posicionais e default; *args e **kwargs para variadic."
+      strong_example: "Evita mutable default; usa keyword-only para APIs claras; return None implícito."
+    - description: "Compreende contrato e reuso"
+      weak_example: "Função faz uma tarefa."
+      medium_example: "Docstring e type hints ajudam leitura; partial para defaults."
+      strong_example: "Separa side effects; funções pequenas; testes cobrem edge cases de parâmetros."
+
+- topic: collections
+  criteria:
+    - description: "Diferencia list, tuple, dict e set"
+      weak_example: "list é lista; dict é dicionário."
+      medium_example: "list mutável ordenada; tuple imutável; dict chave-valor; set único sem ordem."
+      strong_example: "Escolhe estrutura por mutabilidade, unicidade, ordem e complexidade de operações."
+    - description: "Opera com coleções com segurança"
+      weak_example: "append na list; dict usa chave."
+      medium_example: "get() evita KeyError; setdefault para defaults; pop com default."
+      strong_example: "Conhece collections.Counter/defaultdict/deque para casos específicos."
+
+- topic: comprehensions
+  criteria:
+    - description: "Usa comprehensions e generators"
+      weak_example: "Comprehension é loop curto."
+      medium_example: "List comprehension [x for x in xs if ...]; generator expression com parênteses."
+      strong_example: "Generator lazy economiza memória; evita comprehensions ilegíveis com muitos for."
+    - description: "Compara com map/filter e loops"
+      weak_example: "Comprehension é mais rápida sempre."
+      medium_example: "Comprehension costuma ser mais legível que map/filter simples."
+      strong_example: "Escolhe por legibilidade; yield para pipelines lazy; não abusa de one-liners."
+
+- topic: exceptions
+  criteria:
+    - description: "Captura e propaga exceções adequadamente"
+      weak_example: "try/except evita erro."
+      medium_example: "Captura tipo específico; finally sempre roda; raise para re-lançar."
+      strong_example: "EAFP com exceções específicas; não usa except: pass; with para recursos."
+    - description: "Evita anti-padrões com exceções"
+      weak_example: "Sempre try em tudo."
+      medium_example: "Não engolir exceções; custom exceptions para domínio."
+      strong_example: "Exceções para condições excepcionais, não fluxo normal; logging ao tratar erro."
+
+- topic: classes_basics
+  criteria:
+    - description: "Define classes e instâncias"
+      weak_example: "class tem métodos; self é o objeto."
+      medium_example: "__init__ inicializa; atributos de instância vs classe."
+      strong_example: "classmethod/staticmethod para factories/utilities; super() em herança."
+    - description: "Modela dados e comportamento"
+      weak_example: "Classe junta variáveis e funções."
+      medium_example: "__str__/__repr__ para representação; herança para extensão."
+      strong_example: "dataclass/NamedTuple para dados; classe quando comportamento e invariantes importam."
+
+- topic: modules_imports
+  criteria:
+    - description: "Organiza código em módulos e pacotes"
+      weak_example: "import traz código de outro arquivo."
+      medium_example: "Módulo é arquivo .py; pacote é diretório com __init__.py; __main__ em scripts."
+      strong_example: "Imports absolutos em apps; evita circular; entende namespace packages."
+    - description: "Resolve problemas de import"
+      weak_example: "Coloca tudo no mesmo arquivo."
+      medium_example: "PYTHONPATH e venv; imports relativos em pacotes."
+      strong_example: "src layout; lazy import ou reorganização para circular; __init__.py exporta API pública."
+
+- topic: file_io
+  criteria:
+    - description: "Lê e escreve arquivos com segurança"
+      weak_example: "open e read."
+      medium_example: "with open garante close; encoding=utf-8 para texto."
+      strong_example: "pathlib para caminhos; leitura linha a linha para arquivos grandes."
+    - description: "Escolhe modo e ferramenta correta"
+      weak_example: "rb e r são iguais."
+      medium_example: "Texto vs binário; write/ writelines; json para estruturado pequeno."
+      strong_example: "Streaming para volume; Path.read_text só quando tamanho conhecido; trata FileNotFoundError."

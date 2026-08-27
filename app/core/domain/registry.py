@@ -16,6 +16,7 @@ class DomainEnum(str, Enum):
     """Domínios de entrevista disponíveis no sistema."""
 
     ASYNC_MESSAGING = "async_messaging"
+    PYTHON_BASICS = "python_basics"
     # test-only
     FAKE_TEST = "fake_test"
     FAKE_TEST_TWO = "fake_test_two"

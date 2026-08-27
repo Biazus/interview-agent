@@ -1,0 +1,163 @@
+documents:
+  - id: doc_types_01
+    topic: data_types
+    text: >
+      Python tem tipos built-in como int, float, str, bool, list, dict, tuple e set.
+      Para verificar tipo em tempo de execução, prefira isinstance(obj, tipo) em vez
+      de type(obj) == tipo, porque isinstance respeita herança. None é um singleton
+      que representa ausência de valor e é diferente de 0, False ou string vazia.
+
+  - id: doc_types_02
+    topic: data_types
+    text: >
+      Tipos imutáveis (int, float, str, bytes, tuple, frozenset) não permitem alterar
+      o valor interno após criação. Tipos mutáveis (list, dict, set) podem ser
+      modificados in-place. Ao passar um objeto mutável para uma função, a função
+      recebe referência ao mesmo objeto; alterações visíveis afetam o caller.
+      == compara valor; is compara identidade (mesmo objeto na memória).
+
+  - id: doc_scope_01
+    topic: variables_scope
+    text: >
+      Atribuição em Python cria uma referência (binding) entre nome e objeto, não
+      copia o objeto automaticamente. Python resolve nomes pela regra LEGB: Local,
+      Enclosing, Global e Built-in. Variáveis atribuídas dentro de uma função são
+      locais por padrão; global e nonlocal permitem reatribuir nomes de escopos
+      externos.
+
+  - id: doc_scope_02
+    topic: variables_scope
+    text: >
+      Se uma função atribui a um nome, Python trata esse nome como local em toda a
+      função, mesmo antes da atribuição — isso pode causar UnboundLocalError ao
+      ler antes de atribuir. nonlocal é usado em closures para modificar variável do
+      escopo enclosing sem usar global. Closures capturam variáveis por referência;
+      variáveis mutáveis compartilhadas em closures podem surpreender se alteradas.
+
+  - id: doc_flow_01
+    topic: control_flow
+    text: >
+      Condicionais usam if/elif/else. for itera sobre iteráveis (list, str, dict,
+      generators). while repete enquanto a condição é verdadeira. break sai do loop;
+      continue pula à próxima iteração. O else após for/while executa apenas se o
+      loop terminou sem break.
+
+  - id: doc_flow_02
+    topic: control_flow
+    text: >
+      range gera sequência de números sem criar lista completa em memória (em Python 3).
+      enumerate adiciona índice ao iterar; zip combina múltiplos iteráveis em tuplas.
+      Escolha for quando há iterável conhecido; while para condição dinâmica ou
+      retry com backoff simples.
+
+  - id: doc_func_01
+    topic: functions
+    text: >
+      Funções são definidas com def nome(params):. return encerra a função e devolve
+      valor; sem return explícito, retorna None. Parâmetros posicionais vêm antes
+      de defaults. *args coleta argumentos posicionais extras; **kwargs coleta
+      keyword arguments extras como dict.
+
+  - id: doc_func_02
+    topic: functions
+    text: >
+      Evite usar objetos mutáveis (list, dict) como valor default de parâmetro —
+      o default é criado uma vez na definição da função e compartilhado entre chamadas.
+      Use None como default e crie o objeto dentro da função. Keyword-only arguments
+      (após *) forçam chamadas mais claras em APIs com muitos parâmetros opcionais.
+
+  - id: doc_coll_01
+    topic: collections
+    text: >
+      list é ordenada e mutável; append, insert, pop e indexação por inteiro.
+      tuple é ordenada e imutável — útil para registros fixos e chaves de dict.
+      dict mapeia chave única a valor; KeyError ao acessar chave inexistente com [].
+      set contém elementos únicos, sem ordem garantida; suporta união, interseção
+      e diferença.
+
+  - id: doc_coll_02
+    topic: collections
+    text: >
+      dict.get(key, default) evita KeyError. setdefault cria entrada se chave ausente.
+      dict mantém ordem de inserção desde Python 3.7. collections.Counter, defaultdict
+      e deque resolvem casos específicos: contagem, defaults automáticos e filas com
+      append/pop eficientes nas extremidades.
+
+  - id: doc_comp_01
+    topic: comprehensions
+    text: >
+      List comprehension [expr for x in xs if cond] é equivalente a loop com append,
+      geralmente mais legível para transformações simples. Dict e set comprehension
+      usam a mesma sintaxe com {} ou set(). Generator expression (parênteses) é lazy:
+      não materializa todos os elementos na memória.
+
+  - id: doc_comp_02
+    topic: comprehensions
+    text: >
+      yield em uma função generator produz valores sob demanda. Generator expressions
+      e funções generator economizam memória em pipelines grandes. Comprehensions
+      com múltiplos for aninhados podem ficar ilegíveis — prefira loop explícito ou
+      função auxiliar quando a lógica é complexa.
+
+  - id: doc_exc_01
+    topic: exceptions
+    text: >
+      try/except captura exceções; except Tipo captura tipo específico. finally
+      sempre executa (limpeza). raise lança exceção; raise sem argumento re-lança
+      a exceção atual. EAFP (Easier to Ask Forgiveness than Permission) é o estilo
+      Python: tentar e capturar exceção em vez de checar condição antes.
+
+  - id: doc_exc_02
+    topic: exceptions
+    text: >
+      Evite except: ou except Exception genérico sem logging — engole erros silenciosamente.
+      with statement usa context managers (__enter__/__exit__) para garantir liberação
+      de recursos mesmo com exceção. Exceções customizadas herdam de Exception para
+      representar erros de domínio da aplicação.
+
+  - id: doc_class_01
+    topic: classes_basics
+    text: >
+      class define tipo; instância é criada chamando a classe. __init__ inicializa
+      atributos de instância via self. self é a instância atual. Atributos de classe
+      são compartilhados; atributos de instância são per-instância. @classmethod
+      recebe cls; @staticmethod não recebe instância nem classe.
+
+  - id: doc_class_02
+    topic: classes_basics
+    text: >
+      Herança permite estender comportamento; super() chama método da classe base.
+      __str__ retorna representação legível; __repr__ representação para debug.
+      __eq__ define igualdade. dataclass e NamedTuple modelam dados com menos boilerplate
+      quando comportamento customizado é mínimo.
+
+  - id: doc_mod_01
+    topic: modules_imports
+    text: >
+      Módulo é arquivo .py; pacote é diretório com (opcionalmente) __init__.py.
+      import module importa módulo; from module import name importa nome específico.
+      __name__ == '__main__' indica que o arquivo foi executado diretamente, não importado.
+      Scripts usam isso para separar código de biblioteca de ponto de entrada.
+
+  - id: doc_mod_02
+    topic: modules_imports
+    text: >
+      Imports relativos (from . import x) funcionam dentro de pacotes. Import circular
+      ocorre quando módulos importam um ao outro — resolver com reorganização, lazy
+      import ou mover dependência comum. PYTHONPATH e virtualenv afetam onde Python
+      busca módulos; src layout separa código de pacote da raiz do projeto.
+
+  - id: doc_io_01
+    topic: file_io
+    text: >
+      open(path, mode, encoding='utf-8') abre arquivo. Modo 'r' texto, 'rb' binário,
+      'w' escrita. with open(...) as f garante close mesmo com exceção. read() lê tudo;
+      readlines() ou iterar f lê linha a linha sem carregar arquivo inteiro na memória.
+
+  - id: doc_io_02
+    topic: file_io
+    text: >
+      pathlib.Path oferece API moderna para caminhos: Path.read_text, write_text,
+      joinpath. Sempre especifique encoding para texto com caracteres não ASCII.
+      json.load/json.dump para JSON pequeno; para arquivos grandes, processe em
+      streaming ou chunks. FileNotFoundError ao abrir caminho inexistente sem tratamento.

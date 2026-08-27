@@ -1,0 +1,125 @@
+version: 1
+domain: python_basics
+collection: python_basics
+queries:
+  - id: gq_types_mutability
+    query: >
+      Qual a diferença entre tipos mutáveis e imutáveis em Python e como isso
+      afeta passagem de argumentos para funções?
+    topic: data_types
+    expected_top1_source: doc_types_02
+
+  - id: gq_types_isinstance
+    query: >
+      Como verificar o tipo de um valor em Python e por que isinstance é preferido
+      a type() ==?
+    topic: data_types
+    expected_top1_source: doc_types_01
+
+  - id: gq_scope_legb
+    query: >
+      Como Python resolve nomes de variáveis usando a regra LEGB?
+    topic: variables_scope
+    expected_top1_source: doc_scope_01
+
+  - id: gq_scope_nonlocal
+    query: >
+      Quando usar nonlocal em closures e qual problema evita em relação a global?
+    topic: variables_scope
+    expected_top1_source: doc_scope_02
+
+  - id: gq_flow_for_else
+    query: >
+      O que faz o else associado a um loop for ou while em Python?
+    topic: control_flow
+    expected_top1_source: doc_flow_01
+
+  - id: gq_flow_enumerate_zip
+    query: >
+      Quando usar enumerate e zip ao iterar dados em Python?
+    topic: control_flow
+    expected_top1_source: doc_flow_02
+
+  - id: gq_func_args
+    query: >
+      O que são *args e **kwargs em definição de função Python?
+    topic: functions
+    expected_top1_source: doc_func_01
+
+  - id: gq_func_mutable_default
+    query: >
+      Por que evitar list ou dict como valor default de parâmetro em Python?
+    topic: functions
+    expected_top1_source: doc_func_02
+
+  - id: gq_coll_dict_get
+    query: >
+      Como acessar chaves opcionais em dict sem KeyError usando get e setdefault?
+    topic: collections
+    expected_top1_source: doc_coll_02
+
+  - id: gq_coll_list_tuple
+    query: >
+      Qual a diferença entre list e tuple em Python e quando usar cada um?
+    topic: collections
+    expected_top1_source: doc_coll_01
+
+  - id: gq_comp_generator
+    query: >
+      Como generator expression difere de list comprehension em uso de memória?
+    topic: comprehensions
+    expected_top1_source: doc_comp_01
+
+  - id: gq_comp_yield
+    query: >
+      Como yield e funções generator permitem processamento lazy em Python?
+    topic: comprehensions
+    expected_top1_source: doc_comp_02
+
+  - id: gq_exc_eafp
+    query: >
+      O que é EAFP em Python e como se relaciona com try/except?
+    topic: exceptions
+    expected_top1_source: doc_exc_01
+
+  - id: gq_exc_with
+    query: >
+      Como o with statement garante liberação de recursos mesmo com exceções?
+    topic: exceptions
+    expected_top1_source: doc_exc_02
+
+  - id: gq_class_init
+    query: >
+      O que é __init__ e qual o papel de self na definição de classes Python?
+    topic: classes_basics
+    expected_top1_source: doc_class_01
+
+  - id: gq_class_dataclass
+    query: >
+      Quando usar dataclass ou NamedTuple em vez de classe tradicional?
+    topic: classes_basics
+    expected_top1_source: doc_class_02
+
+  - id: gq_mod_main
+    query: >
+      O que significa __name__ == '__main__' em scripts Python?
+    topic: modules_imports
+    expected_top1_source: doc_mod_01
+
+  - id: gq_mod_circular
+    query: >
+      Como resolver import circular entre módulos Python?
+    topic: modules_imports
+    expected_top1_source: doc_mod_02
+
+  - id: gq_io_with
+    query: >
+      Por que usar with open em vez de open sem context manager?
+    topic: file_io
+    expected_top1_source: doc_io_01
+
+  - id: gq_io_pathlib
+    query: >
+      Como pathlib.Path simplifica leitura e escrita de arquivos de texto?
+    topic: file_io
+    expected_top1_source: doc_io_02
