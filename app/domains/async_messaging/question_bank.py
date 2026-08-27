@@ -8,7 +8,5 @@ _DATA_PATH = Path(__file__).parent / "data" / "questions.yaml"
 class StaticAsyncMessagingQuestionBank(StaticQuestionBank):
     """Banco de perguntas estático, cobrindo SQS/SNS/Lambda."""
 
-    # TODO: retornar algo diferente de [0] para aleatoriedade
-
     def __init__(self, data_path: Path = _DATA_PATH) -> None:
         super().__init__(data_path)

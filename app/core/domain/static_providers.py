@@ -1,3 +1,4 @@
+import random
 from collections.abc import Callable
 from pathlib import Path
 
@@ -17,7 +18,7 @@ class StaticQuestionBank:
     ) -> None:
         self._questions = load_questions_from_yaml(data_path)
         self._candidate_selector = candidate_selector or (
-            lambda candidates: candidates[0]
+            lambda candidates: random.choice(candidates)
         )
 
     def next_question(

@@ -51,14 +51,36 @@ def rubrics_yaml(tmp_path: Path) -> Path:
     return path
 
 
-def test_next_question_returns_first_matching_candidate(questions_yaml: Path):
+def test_next_question_returns_matching_candidate_from_topic_and_difficulty(
+    questions_yaml: Path,
+):
     bank = StaticQuestionBank(questions_yaml)
 
     question = bank.next_question(topic="alpha", difficulty=1)
 
-    assert question.id == "q2"
+    assert question.id in {"q2", "q3"}
     assert question.topic == "alpha"
     assert question.difficulty == 1
+
+
+def test_next_question_uses_random_choice(monkeypatch, questions_yaml: Path):
+    captured: list[list[Question]] = []
+
+    def fake_choice(candidates: list[Question]) -> Question:
+        captured.append(candidates)
+        return candidates[0]
+
+    monkeypatch.setattr(
+        "app.core.domain.static_providers.random.choice",
+        fake_choice,
+    )
+
+    bank = StaticQuestionBank(questions_yaml)
+
+    bank.next_question(topic="alpha", difficulty=1)
+
+    assert len(captured) == 1
+    assert {q.id for q in captured[0]} == {"q2", "q3"}
 
 
 def test_next_question_respects_exclude_ids(questions_yaml: Path):
