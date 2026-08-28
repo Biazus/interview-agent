@@ -9,9 +9,9 @@ terraform {
   }
 
   cloud {
-    organization = "biazus"      # substituir
+    organization = "biazus" # substituir
     workspaces {
       name = "interview-agent"
-   }
+    }
   }
 }
