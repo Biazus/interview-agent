@@ -7,6 +7,8 @@ os.environ.setdefault(
     "DATABASE_URL",
     "postgresql+asyncpg://interview:interview@localhost:5432/interview_agent_test",
 )
+# Rate limit compartilha contadores em memória no processo de teste; desliga aqui.
+os.environ["RATE_LIMIT_ENABLED"] = "false"
 
 import asyncio
 from collections.abc import AsyncIterator
