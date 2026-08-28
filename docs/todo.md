@@ -7,9 +7,7 @@ Severity: **Critical** · **High** · **Medium** · **Low** · **Info**
 
 ## LLM & agents
 
-- [ ] **[Critical]** `EvaluatorAgent._parse_response()` relies on free-text parsing (`NIVEL:` / `FEEDBACK:`) in `app/agents/evaluator.py`, while `ReportingAgent` already uses structured output via `generate_structured()`.  
-  **Impact:** Intermittent parse failures surface as `503 LLM_UNAVAILABLE`.  
-  **Recommendation:** Migrate evaluation to `generate_structured()` with a Pydantic schema (mirror `app/agents/reporting_schema.py`).
+- [x] **[Critical]** `EvaluatorAgent` migrated to structured output via `generate_structured_with_response()` and `EvaluationLLMOutput` in `app/agents/evaluator.py` (replaces free-text `NIVEL:`/`FEEDBACK:` parsing).
 
 - [ ] **[Medium]** RAG retrieval runs synchronously in a thread (`asyncio.to_thread` in evaluator) — acceptable for v1, but a bottleneck under high concurrency.  
   **Recommendation:** Revisit when scaling; consider async embedding client or dedicated worker.
@@ -24,9 +22,10 @@ Severity: **Critical** · **High** · **Medium** · **Low** · **Info**
   **Impact:** `auth_tokens` table grows indefinitely.  
   **Recommendation:** Background purge job + optional `POST /auth/logout` with token revocation.
 
-- [ ] **[Low]** No rate limiting on `/auth/*`.  
-  **Impact:** Brute-force on login/register.  
-  **Recommendation:** Middleware or reverse-proxy limits before exposing publicly.
+- [x] **[Low]** Rate limiting on `/auth/*` — slowapi shared limit (`RATE_LIMIT_AUTH`, default 5/min) on register and login; global limit via custom middleware (`app/api/rate_limit.py`).
+
+- [ ] **[Medium]** Rate limit storage is `memory://` (per process). Multi-replica deploy applies independent buckets on each instance — no shared limit across pods.  
+  **Recommendation:** Redis (or equivalent) backend when scaling beyond one API replica.
 
 - [x] **[Info]** CORS configured in `app/api/main.py` via `CORS_ORIGINS` in settings.
 
@@ -155,9 +154,10 @@ Severity: **Critical** · **High** · **Medium** · **Low** · **Info**
 
 | # | Item | Severity | Effort | Status |
 |---|------|----------|--------|--------|
-| 1 | Structured output in `EvaluatorAgent` | Critical | High | Open |
+| 1 | Structured output in `EvaluatorAgent` | Critical | High | **Done** |
 | 2 | Readiness check (Postgres + Qdrant) | High | Low | Open |
 | 3 | API tests: ownership 404, report retry, duplicate turn | High | Low | Open |
 | 4 | Move `pytest` to dev; remove dead deps | High | Low | Open |
 | 5 | Token purge + optional logout | High | Medium | Open |
-| 6 | JSON logging + request ID + LLM token metrics | Low | Medium | Open |
+| 6 | Distributed rate limit (Redis) for multi-replica | Medium | Medium | Open |
+| 7 | JSON logging + request ID + LLM token metrics | Low | Medium | Open |
