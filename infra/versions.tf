@@ -8,14 +8,10 @@ terraform {
     }
   }
 
-  # Depois de criar org + workspace em https://app.terraform.io:
-  # 1. Descomente o bloco abaixo
-  # 2. Rode: terraform login && terraform init
-  #
-  # cloud {
-  #   organization = "sua-org"
-  #   workspaces {
-  #     name = "interview-agent"
-  #   }
-  # }
+  cloud {
+    organization = "biazus"      # substituir
+    workspaces {
+      name = "interview-agent"
+   }
+  }
 }

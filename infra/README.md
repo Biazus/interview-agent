@@ -24,7 +24,7 @@ Terraform configuration for production/demo deployment:
 | `RENDER_API_KEY` | Render Dashboard → Account Settings → API Keys |
 | `RENDER_OWNER_ID` | Render Settings — `usr-...` or `tea-...` |
 
-Set locally before `terraform plan/apply`, or in GitHub Actions secrets if using CI (workflow is currently commented out in `.github/workflows/terraform.yml`).
+Set locally before `terraform plan/apply`, or in GitHub Actions secrets/variables (see [CI/CD](#cicd-plano-a) below).
 
 Sensitive Terraform variables can also be passed as `TF_VAR_*` environment variables instead of writing them in `terraform.tfvars`.
 
@@ -135,16 +135,55 @@ curl "$(terraform output -raw api_url)/health"
 - Qdrant cluster creation
 - Vercel project / domain
 - Qdrant seed ingestion
-- GitHub Actions secrets (workflow template exists but is commented out)
+- GitHub Actions secrets (configure manually — see [CI/CD (Plano A)](#cicd-plano-a))
 
-## Remote state (optional)
+## CI/CD (Plano A)
 
-[`versions.tf`](versions.tf) includes a commented HCP Terraform backend block. Uncomment and configure after creating an organization and workspace:
+Workflow: [`.github/workflows/terraform.yml`](../.github/workflows/terraform.yml)
 
-```bash
-terraform login
-terraform init
-```
+| Event | Ação |
+|-------|------|
+| PR com mudanças em `infra/**` | `fmt` → `init` → `plan` |
+| Push em `main` com `infra/**` | `fmt` → `init` (validação) |
+| `workflow_dispatch` (manual) | `fmt` → `init` → `plan` → `apply` |
+
+### GitHub — secrets (7)
+
+| Secret | Descrição |
+|--------|-----------|
+| `TF_API_TOKEN` | Token HCP Terraform (User Settings → Tokens) |
+| `RENDER_API_KEY` | Render API key |
+| `RENDER_OWNER_ID` | Render owner ID (`usr-...` ou `tea-...`) |
+| `TF_VAR_database_url` | Postgres URI (Supabase) |
+| `TF_VAR_groq_api_key` | Groq API key |
+| `TF_VAR_openrouter_api_key` | OpenRouter API key |
+| `TF_VAR_qdrant_cluster_api_key` | Qdrant cluster API key |
+
+### GitHub — variables (5)
+
+| Variable | Descrição |
+|----------|-----------|
+| `TF_VAR_github_repo_url` | URL HTTPS do repositório |
+| `TF_VAR_cors_origins` | Origem do frontend (Vercel) |
+| `TF_VAR_supabase_project_ref` | Ref do projeto Supabase |
+| `TF_VAR_qdrant_cluster_id` | UUID do cluster Qdrant |
+| `TF_VAR_qdrant_cluster_endpoint` | Endpoint HTTPS do Qdrant |
+
+### HCP Terraform (remote state)
+
+1. Criar organização e workspace `interview-agent` em [app.terraform.io](https://app.terraform.io).
+2. Em [`versions.tf`](versions.tf), descomentar o bloco `cloud {}` e substituir `SUA_ORG` pelo nome real.
+3. Localmente: `terraform login` → `terraform init` (sem `-migrate-state`; confirme **yes** quando perguntar se deve migrar o state local para HCP).
+4. Criar secret `TF_API_TOKEN` no GitHub com o mesmo token usado no login.
+
+### O que fazer manualmente (checklist)
+
+- [ ] Criar org e workspace no HCP Terraform
+- [ ] Descomentar `cloud {}` em `versions.tf` com org real
+- [ ] `terraform login` + `terraform init` e confirmar migração do state (uma vez)
+- [ ] Configurar os 7 secrets e 5 variables no GitHub
+- [ ] (Opcional) Branch protection em `main` exigindo o check do workflow Terraform em PRs que alterem `infra/**`
+- [ ] Apply: disparar **Run workflow** em Actions → Terraform, ou `terraform apply` local
 
 ## Troubleshooting
 
