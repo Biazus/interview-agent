@@ -1,53 +1,61 @@
-# name: Terraform
+name: Terraform
 
-# on:
-#   pull_request:
-#     paths: ["infra/**"]
-#   push:
-#     branches: [main]
-#     paths: ["infra/**"]
-#   workflow_dispatch:
+"on":
+  pull_request:
+    paths: ["infra/**"]
+  push:
+    branches: [main]
+    paths: ["infra/**"]
+  workflow_dispatch:
 
-# defaults:
-#   run:
-#     working-directory: infra
+concurrency:
+  group: terraform-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
-# jobs:
-#   terraform:
-#     runs-on: ubuntu-latest
+permissions:
+  contents: read
 
-#     env:
-#       TF_VAR_github_repo_url: ${{ vars.TF_VAR_github_repo_url }}
-#       TF_VAR_cors_origins: ${{ vars.TF_VAR_cors_origins }}
-#       TF_VAR_supabase_project_ref: ${{ vars.TF_VAR_supabase_project_ref }}
-#       TF_VAR_database_url: ${{ secrets.TF_VAR_database_url }}
-#       TF_VAR_groq_api_key: ${{ secrets.TF_VAR_groq_api_key }}
-#       TF_VAR_openrouter_api_key: ${{ secrets.TF_VAR_openrouter_api_key }}
-#       TF_VAR_qdrant_cluster_id: ${{ vars.TF_VAR_qdrant_cluster_id }}
-#       TF_VAR_qdrant_cluster_endpoint: ${{ vars.TF_VAR_qdrant_cluster_endpoint }}
-#       TF_VAR_qdrant_cluster_api_key: ${{ secrets.TF_VAR_qdrant_cluster_api_key }}
-#       RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-#       RENDER_OWNER_ID: ${{ secrets.RENDER_OWNER_ID }}
-#       # Caso usar backend HCP Terraform (descomentar em versions.tf):
-#       # TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+defaults:
+  run:
+    working-directory: infra
 
-#     steps:
-#       - uses: actions/checkout@v4
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    environment: dev
 
-#       - uses: hashicorp/setup-terraform@v3
-#         with:
-#           terraform_version: "1.11.0"
+    env:
+      TF_VAR_github_repo_url: ${{ vars.TF_VAR_github_repo_url }}
+      TF_VAR_cors_origins: ${{ vars.TF_VAR_cors_origins }}
+      TF_VAR_supabase_project_ref: ${{ vars.TF_VAR_supabase_project_ref }}
+      TF_VAR_database_url: ${{ secrets.TF_VAR_database_url }}
+      TF_VAR_groq_api_key: ${{ secrets.TF_VAR_groq_api_key }}
+      TF_VAR_openrouter_api_key: ${{ secrets.TF_VAR_openrouter_api_key }}
+      TF_VAR_qdrant_cluster_id: ${{ vars.TF_VAR_qdrant_cluster_id }}
+      TF_VAR_qdrant_cluster_endpoint: ${{ vars.TF_VAR_qdrant_cluster_endpoint }}
+      TF_VAR_qdrant_cluster_api_key: ${{ secrets.TF_VAR_qdrant_cluster_api_key }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_OWNER_ID: ${{ secrets.RENDER_OWNER_ID }}
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
 
-#       - name: Terraform fmt check
-#         run: terraform fmt -check -recursive
+    steps:
+      - uses: actions/checkout@v4
 
-#       - name: Terraform init
-#         run: terraform init -input=false
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.11.0"
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
-#       - name: Terraform plan
-#         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
-#         run: terraform plan -input=false
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive
 
-#       - name: Terraform apply
-#         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-#         run: terraform apply -auto-approve -input=false
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform plan
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        run: terraform plan -input=false
+
+      - name: Terraform apply
+        if: github.event_name == 'workflow_dispatch'
+        run: terraform apply -auto-approve -input=false

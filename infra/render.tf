@@ -15,12 +15,12 @@ resource "render_web_service" "api" {
 
   env_vars = {
     DATABASE_URL       = { value = local.database_url }
-    QDRANT_HOST          = { value = local.qdrant_host }
-    QDRANT_PORT          = { value = tostring(local.qdrant_port) }
-    QDRANT_API_KEY       = { value = var.qdrant_cluster_api_key }
-    CORS_ORIGINS         = { value = var.cors_origins }
-    GROQ_API_KEY         = { value = var.groq_api_key }
-    OPENROUTER_API_KEY   = { value = var.openrouter_api_key }
-    LOG_LEVEL            = { value = "INFO" }
+    QDRANT_HOST        = { value = local.qdrant_host }
+    QDRANT_PORT        = { value = tostring(local.qdrant_port) }
+    QDRANT_API_KEY     = { value = var.qdrant_cluster_api_key }
+    CORS_ORIGINS       = { value = var.cors_origins }
+    GROQ_API_KEY       = { value = var.groq_api_key }
+    OPENROUTER_API_KEY = { value = var.openrouter_api_key }
+    LOG_LEVEL          = { value = "INFO" }
   }
 }
