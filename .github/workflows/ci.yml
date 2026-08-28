@@ -1,3 +1,5 @@
+# Lembrar de Trocar required check de "test" para "ci-success" e remover "test" dos required
+
 name: CI
 
 on:
@@ -5,9 +7,47 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'app/**'
+              - 'tests/**'
+              - 'scripts/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'docker-compose.yml'
+              - 'alembic/**'
+              - 'alembic.ini'
+              - '.github/workflows/**'
+              - '.pre-commit-config.yaml'
+
   test:
+    needs: changes
+    if: |
+      always() &&
+      needs.changes.result == 'success' &&
+      (needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
 
     env:
@@ -65,10 +105,10 @@ jobs:
         run: uv run pytest tests/integration
 
       - name: Lint (ruff)
-        run: uv run ruff check .
+        run: uv run ruff check app tests scripts
 
       - name: Check formatting (ruff)
-        run: uv run ruff format --check .
+        run: uv run ruff format --check app tests scripts
 
       - name: Check runtime deps exclude torch stack
         run: bash scripts/ci/check_no_torch.sh
@@ -78,3 +118,29 @@ jobs:
 
       - name: Check Docker image size (650 MB gate)
         run: bash scripts/ci/check_image_size.sh interview-agent-api:ci
+
+
+  ci-success:
+    name: ci-success
+    needs: [changes, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate CI outcome
+        run: |
+          # 1. changes falhou: CI falha (não sabemos o que mudou)
+          if [ "${{ needs.changes.result }}" != "success" ]; then
+            echo "changes job failed — cannot determine scope"
+            exit 1
+          fi
+
+          # 2. backend mudou OU dispatch manual: test deve ter passado
+          if [ "${{ needs.changes.outputs.backend }}" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ needs.test.result }}" != "success" ]; then
+              echo "test job required but result was: ${{ needs.test.result }}"
+              exit 1
+            fi
+          fi
+
+          # 3. backend não mudou (push/PR) → test skipped é OK
+          echo "CI success"
