@@ -22,7 +22,10 @@ def test_ensure_collection_uses_vector_size_from_embedding_config() -> None:
     mock_client = MagicMock()
     mock_client.get_collections.return_value.collections = []
 
-    with patch("app.core.rag.vector_store.QdrantClient", return_value=mock_client):
+    with patch(
+        "app.core.rag.vector_store.create_qdrant_client",
+        return_value=mock_client,
+    ):
         store = VectorStore()
         store.ensure_collection("test_collection")
 

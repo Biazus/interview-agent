@@ -99,10 +99,12 @@ def test_check_rag_ready_default_uses_get_vector_store_factory():
 def test_check_rag_ready_default_uses_settings_host():
     from app.core.rag.factory import clear_rag_cache, get_vector_store
 
-    captured: list[tuple[str, int]] = []
+    captured: list[tuple[str, int, str | None]] = []
 
-    def capture_vector_store(host: str, port: int) -> MagicMock:
-        captured.append((host, port))
+    def capture_vector_store(
+        host: str, port: int, api_key: str | None = None
+    ) -> MagicMock:
+        captured.append((host, port, api_key))
         return MagicMock(spec=["get_collection_info"])
 
     with (
@@ -115,10 +117,11 @@ def test_check_rag_ready_default_uses_settings_host():
         clear_rag_cache()
         mock_settings.QDRANT_HOST = "vector-db"
         mock_settings.QDRANT_PORT = 6333
+        mock_settings.QDRANT_API_KEY = None
 
         get_vector_store()
 
-    assert captured == [("vector-db", 6333)]
+    assert captured == [("vector-db", 6333, None)]
 
 
 def test_check_rag_ready_uses_only_vector_store_abstraction():

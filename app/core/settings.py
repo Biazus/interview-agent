@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
+    QDRANT_API_KEY: str | None = None
     CORS_ORIGINS: str = _DEFAULT_CORS_ORIGINS_STR
     GROQ_API_KEY: str
     OPENROUTER_API_KEY: str
@@ -49,7 +50,11 @@ class Settings(BaseSettings):
             origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()
         ]
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()

@@ -1,0 +1,23 @@
+# Copie para terraform.tfvars (não commitar) e preencha os valores.
+# Tokens sensíveis também podem ir em variáveis de ambiente TF_VAR_*.
+
+github_repo_url = "https://github.com/SEU_USER/interview-agent"
+cors_origins    = "https://seu-app.vercel.app"
+
+# Supabase já existente
+# Ref: https://supabase.com/dashboard/project/<supabase_project_ref>
+# URL:  postgresql://postgres.[ref]:[password]@aws-0-...pooler.supabase.com:6543/postgres
+supabase_project_ref = "cedtkiawpawdhmcffsxj"
+database_url         = "postgresql+asyncpg://postgres:PASSWORD@db.cedtkiawpawdhmcffsxj.supabase.co:5432/postgres?sslmode=require"
+
+groq_api_key       = "gsk_..."
+openrouter_api_key = "sk-or-..."
+
+# Cluster Qdrant já existente (Cluster Detail → Overview / API Keys)
+qdrant_cluster_id       = "29907184-941c-499a-9ae8-4ef2ae668445"
+qdrant_cluster_endpoint = "https://xxx.sa-east-1-0.aws.cloud.qdrant.io"
+qdrant_cluster_api_key  = "eyJ..."
+
+# Env vars para providers (não vão no .tfvars):
+#   RENDER_API_KEY
+#   RENDER_OWNER_ID   # usr-... ou tea-... (Settings no Render)
