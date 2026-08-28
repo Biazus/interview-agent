@@ -13,7 +13,11 @@ def get_embedding_provider() -> EmbeddingProvider:
 
 @lru_cache
 def get_vector_store() -> VectorStore:
-    return VectorStore(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
+    return VectorStore(
+        host=settings.QDRANT_HOST,
+        port=settings.QDRANT_PORT,
+        api_key=settings.QDRANT_API_KEY,
+    )
 
 
 @lru_cache

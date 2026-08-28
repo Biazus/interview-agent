@@ -1,4 +1,3 @@
-from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
     FieldCondition,
@@ -9,11 +8,17 @@ from qdrant_client.models import (
 )
 
 from app.core.rag.embedding_config import VECTOR_SIZE
+from app.core.rag.qdrant_client import create_qdrant_client
 
 
 class VectorStore:
-    def __init__(self, host: str = "localhost", port: int = 6333) -> None:
-        self._client = QdrantClient(host=host, port=port)
+    def __init__(
+        self,
+        host: str = "localhost",
+        port: int = 6333,
+        api_key: str | None = None,
+    ) -> None:
+        self._client = create_qdrant_client(host=host, port=port, api_key=api_key)
 
     def ensure_collection(self, collection_name: str) -> None:
         existing = [c.name for c in self._client.get_collections().collections]

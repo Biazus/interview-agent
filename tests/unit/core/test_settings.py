@@ -74,6 +74,19 @@ def test_settings_cors_origins_parses_comma_separated_env(
     ]
 
 
+def test_settings_ignores_extra_env_vars(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://localhost/test")
+    monkeypatch.setenv("GROQ_API_KEY", "groq-test")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-test")
+    monkeypatch.setenv("RENDER_API_KEY", "render-secret")
+    monkeypatch.setenv("QDRANT_CLOUD_API_KEY", "qdrant-cloud-secret")
+
+    settings = Settings()
+
+    assert settings.GROQ_API_KEY == "groq-test"
+    assert settings.OPENROUTER_API_KEY == "openrouter-test"
+
+
 def test_settings_cors_origins_empty_string_falls_back_to_default(
     monkeypatch: pytest.MonkeyPatch,
 ):

@@ -6,41 +6,52 @@ import logging
 import os
 import time
 
-from qdrant_client import QdrantClient
+from app.core.rag.qdrant_client import create_qdrant_client
 
 logger = logging.getLogger(__name__)
 
 
-def _resolve_host_port(
+def _resolve_connection(
     host: str | None,
     port: int | None,
-) -> tuple[str, int]:
+    api_key: str | None,
+) -> tuple[str, int, str | None]:
     resolved_host = host or os.environ.get("QDRANT_HOST")
     resolved_port = port
     if resolved_port is None:
         port_str = os.environ.get("QDRANT_PORT")
         if port_str is not None:
             resolved_port = int(port_str)
+    resolved_api_key = (
+        api_key if api_key is not None else os.environ.get("QDRANT_API_KEY")
+    )
 
-    if resolved_host is None or resolved_port is None:
+    if resolved_host is None or resolved_port is None or resolved_api_key is None:
         from app.core.settings import settings
 
         if resolved_host is None:
             resolved_host = settings.QDRANT_HOST
         if resolved_port is None:
             resolved_port = settings.QDRANT_PORT
+        if resolved_api_key is None:
+            resolved_api_key = settings.QDRANT_API_KEY
 
-    return resolved_host or "localhost", resolved_port or 6333
+    return resolved_host or "localhost", resolved_port or 6333, resolved_api_key
 
 
 def wait_for_qdrant(
     *,
     host: str | None = None,
     port: int | None = None,
+    api_key: str | None = None,
     interval_seconds: float = 2.0,
     timeout_seconds: float | None = None,
 ) -> None:
-    resolved_host, resolved_port = _resolve_host_port(host, port)
+    resolved_host, resolved_port, resolved_api_key = _resolve_connection(
+        host,
+        port,
+        api_key,
+    )
     deadline = (
         time.monotonic() + timeout_seconds if timeout_seconds is not None else None
     )
@@ -57,7 +68,11 @@ def wait_for_qdrant(
 
     while deadline is None or time.monotonic() < deadline:
         try:
-            QdrantClient(host=resolved_host, port=resolved_port).get_collections()
+            create_qdrant_client(
+                host=resolved_host,
+                port=resolved_port,
+                api_key=resolved_api_key,
+            ).get_collections()
             logger.info("Qdrant is ready.")
             return
         except Exception:
