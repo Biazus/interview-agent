@@ -1,9 +1,11 @@
 
 # Interview Agent
 
-An AI-powered technical interview platform. Candidates authenticate via a REST API, run adaptive interviews grounded in domain knowledge (RAG), and receive structured reports. Behind the scenes, agents orchestrate question selection, retrieval-augmented context, and rubric-based evaluation.
+An AI-powered technical interview platform. Candidates register via a React web app or REST API, run adaptive interviews grounded in domain knowledge (RAG), and receive structured reports. Behind the scenes, agents orchestrate question selection, retrieval-augmented context, and rubric-based evaluation.
 
 ## Overview
+
+**Frontend** — React SPA (Vite) for register, login, interview setup, question flow, and final report. Deployed separately (e.g. Vercel); talks to the API over HTTPS with Bearer auth.
 
 **API layer** — FastAPI endpoints for auth, discovery, and the interview lifecycle (start → answer → report).
 
@@ -21,12 +23,14 @@ A central **registry** wires domains at startup. The orchestrator picks a domain
 
 | Layer | Technology |
 |-------|------------|
+| Frontend | React 19, Vite 8, Tailwind 4, React Router 7 |
 | Runtime | Python 3.13, [uv](https://docs.astral.sh/uv/) |
-| API | FastAPI, Uvicorn |
+| API | FastAPI, Uvicorn, slowapi (rate limiting) |
 | Database | PostgreSQL 16, SQLAlchemy async + asyncpg, Alembic |
 | Auth | Argon2 passwords, opaque Bearer tokens (SHA-256 in DB) |
 | Vectors | Qdrant, fastembed (ONNX) |
 | LLM | Groq → OpenRouter fallback chain |
+| Deploy (prod) | Render (API), Vercel (SPA), Terraform (`infra/`) |
 | CI | GitHub Actions (Postgres + Qdrant service containers) |
 
 > **Embeddings runtime:** Production uses **fastembed** (ONNX) instead of PyTorch/sentence-transformers. The multi-stage Dockerfile installs `libgomp1` for ONNX Runtime on Debian slim.
@@ -71,6 +75,19 @@ Logs: `docker compose logs -f api`
 
 You do **not** need to run migrations or start Uvicorn manually when using Docker. You **do** need to run the seed job once before starting interviews (or after RAG data changes). `POST /interviews` returns **503** `RAG_NOT_READY` if Qdrant is empty or stale.
 
+## Quick start (Frontend)
+
+With the API running on `:8000`:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173. Vite proxies `/auth`, `/domains`, `/topics`, `/interviews`, and `/health` to the API — no `VITE_API_BASE_URL` needed in dev. CORS defaults already allow `localhost:5173`.
+
+See [frontend/README.md](frontend/README.md) for routes, auth storage, and Vercel deploy.
 
 ## Local tooling (uv)
 
@@ -143,6 +160,7 @@ Protected routes expect `Authorization: Bearer <token>`.
 | `ANSWER_TOO_LONG` | 422 | Answer exceeds 4096 characters |
 | `RAG_NOT_READY` | 503 | Qdrant empty or seed manifest stale on `POST /interviews` |
 | `LLM_UNAVAILABLE` | 503 | All LLM providers failed |
+| `RATE_LIMIT_EXCEEDED` | 429 | Global or auth rate limit exceeded |
 
 ## Environment variables
 
@@ -153,10 +171,17 @@ Protected routes expect `Authorization: Bearer <token>`.
 | `OPENROUTER_API_KEY` | Yes | — | OpenRouter API key (fallback LLM) |
 | `AUTH_TOKEN_TTL_SECONDS` | No | `86400` | Bearer token lifetime (24h) |
 | `LOG_LEVEL` | No | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
-| `QDRANT_HOST` | No | `localhost` | Qdrant hostname (`vector-db` inside Docker Compose) |
+| `QDRANT_HOST` | No | `localhost` | Qdrant hostname (`vector-db` inside Docker Compose; Qdrant Cloud host in prod) |
 | `QDRANT_PORT` | No | `6333` | Qdrant HTTP port |
+| `QDRANT_API_KEY` | No* | — | Required for Qdrant Cloud (Render/production); optional for local Docker |
+| `CORS_ORIGINS` | No | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated allowed browser origins |
+| `RATE_LIMIT_ENABLED` | No | `true` | Enable slowapi rate limiting (`false` in pytest via `tests/conftest.py`) |
+| `RATE_LIMIT_GLOBAL` | No | `20/minute` | Global limit per client IP (moving window) |
+| `RATE_LIMIT_AUTH` | No | `5/minute` | Shared limit on `/auth/register` and `/auth/login` |
 
-Copy [.env.example](.env.example) as a starting point. When using `docker compose`, `QDRANT_HOST` is set to `vector-db` for the API service automatically.
+Copy [.env.example](.env.example) as a starting point. When using `docker compose`, `QDRANT_HOST` is set to `vector-db` for the API service automatically. CORS defaults include the Vite dev server — no extra config needed for local full-stack dev.
+
+Rate limiting uses in-memory storage per process; multi-replica deploys apply limits independently on each instance (see [docs/todo.md](docs/todo.md)).
 
 ## Running tests
 
@@ -198,29 +223,54 @@ CI runs the same suites with Postgres and Qdrant service containers (see [.githu
 
 Structured logging via `app/core/logging.py`. `configure_logging()` runs at app startup using `LOG_LEVEL` from settings. Services log with `extra={}` fields (interview/candidate UUIDs, error types). No PII in logs — emails, tokens, and answer text are never logged.
 
+## Production deploy (overview)
+
+| Layer | Host | Notes |
+|-------|------|-------|
+| API | Render | Docker web service; Terraform in `infra/` |
+| Database | Supabase | Existing Postgres; connection string in Terraform |
+| Vectors | Qdrant Cloud | Existing cluster; seed via `scripts/run_seed.py` after deploy |
+| Frontend | Vercel | Root `frontend/`; set `VITE_API_BASE_URL` to API URL |
+
+```bash
+cd infra && cp terraform.tfvars.example terraform.tfvars
+# Set RENDER_API_KEY, RENDER_OWNER_ID, fill tfvars, then:
+terraform init && terraform apply
+```
+
+Post-deploy: seed Qdrant Cloud, configure Vercel with `VITE_API_BASE_URL`, align `cors_origins` with the frontend URL. Full checklist: [infra/README.md](infra/README.md).
+
 ## Project layout
 
 ```
-app/
-├── api/                  # FastAPI app, routers, schemas, dependencies, error handlers
+app/                      # FastAPI backend
+├── api/                  # Routers, schemas, rate limiting, error handlers
 ├── agents/               # Orchestrator, evaluator, reporting
-├── services/             # auth_service, interview_service, discovery_service
-├── repositories/         # SQLAlchemy persistence (candidates, interviews, tokens)
-├── core/
-│   ├── auth/             # Password hashing, token generation/validation
-│   ├── db/               # Engine, session, ORM models
-│   ├── domain/           # Registry, interfaces (Question, Rubric, Chunk)
-│   ├── llm/              # Providers, fallback chain, structured output
-│   ├── rag/              # Embeddings, vector store, retriever
-│   ├── exceptions.py     # Domain exceptions (mapped to HTTP in api/errors.py)
-│   ├── logging.py        # Logging configuration and helpers
-│   └── settings.py       # Pydantic settings from .env
+├── services/             # auth, interview, discovery
+├── repositories/         # SQLAlchemy persistence
+├── core/                 # auth, db, domain registry, llm, rag, settings
 └── domains/
     └── async_messaging/  # First domain: questions, rubrics, RAG seed data
+
+frontend/                 # React SPA (see frontend/README.md)
+├── src/
+│   ├── api/              # HTTP client and endpoint wrappers
+│   ├── auth/             # Token storage (localStorage)
+│   ├── components/       # guards, layout, ui
+│   └── pages/            # Login, Register, Setup, Interview, Report
+└── vercel.json           # SPA routing rewrites
+
+infra/                    # Terraform — Render API + env wiring (see infra/README.md)
+docs/                     # Product and technical roadmaps, todo backlog
 ```
 
 New domains (Kafka, RabbitMQ, etc.) can be added by implementing the three interfaces and registering a factory in the registry.
 
 ## Further reading
 
-- [docs/todo.md](docs/todo.md) — dependency audit and follow-up backlog
+- [frontend/README.md](frontend/README.md) — SPA routes, local dev, Vercel deploy
+- [infra/README.md](infra/README.md) — Terraform, Render, Qdrant Cloud seed
+- [CHANGELOG.md](CHANGELOG.md) — release history
+- [docs/product_roadmap.md](docs/product_roadmap.md) — product phases and validation
+- [docs/technical_roadmap.md](docs/technical_roadmap.md) — architecture evolution
+- [docs/todo.md](docs/todo.md) — engineering backlog

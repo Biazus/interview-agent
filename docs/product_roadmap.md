@@ -1,6 +1,6 @@
 # Product Roadmap — interview-agent
 
-Strategic product direction for **interview-agent** (~v0.1.0). Last updated Aug 2026.
+Strategic product direction for **interview-agent** (~v0.3). Last updated Aug 2026.
 
 For engineering execution, see [`technical_roadmap.md`](./technical_roadmap.md).  
 For tactical debt and checkboxes, see [`todo.md`](./todo.md).
@@ -23,13 +23,13 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 | 1b | **Secondary persona (future)** | Company / recruiter applying interviews to candidates |
 | 2 | **Feedback timing (now)** | Report only at the end of the interview — no per-turn feedback in the API |
 | 2b | **Feedback timing (future)** | Optional per-question feedback so candidates learn how they should have answered |
-| 3 | **Frontend** | React + Vite — planned soon |
+| 3 | **Frontend** | React + Vite SPA — **shipped** (v0.3 validation in progress) |
 | 4 | **Domain strategy (now)** | Expand curated domains (Kafka, RabbitMQ, etc.) maintained by the project |
 | 4b | **Domain strategy (future)** | Companies can define a custom domain: upload RAG documents, rubrics, and question banks |
 | 5 | **Distribution (now)** | Public hosted instance (Miller pays LLM cost initially) |
 | 5b | **Distribution (future)** | Optional BYOK — users supply their own `GROQ_API_KEY` / `OPENROUTER_API_KEY` to use their models |
 | 6 | **Usage limits** | Not defined yet — per-user caps (e.g. interviews/day) should be considered before wide public launch |
-| 7 | **Frontend deploy** | Separate deploy (e.g. Vercel for SPA + API on its own host/subdomain) |
+| 7 | **Frontend deploy** | Vercel (SPA) + Render (API) via Terraform in `infra/` |
 | 8 | **Auth (v0.3)** | Bearer token in frontend storage for MVP |
 | 8b | **Auth (future)** | Migrate to httpOnly cookies |
 | 9 | **New domains** | Add multiple curated domains over time (Kafka, RabbitMQ, etc.) — no single “next domain” locked |
@@ -41,7 +41,7 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 
 ---
 
-## Current state (v0.2 shipped — v0.3 next)
+## Current state (v0.2 shipped — v0.3 nearly complete)
 
 ### What exists
 
@@ -49,25 +49,28 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 |-----------|-------|
 | API | 9 endpoints — auth, discovery, full interview lifecycle |
 | Domains | 1 (`async_messaging`): 5 topics, 35 questions, 12 RAG documents |
-| Agents | Orchestrator + Evaluator (text parse) + Reporting (structured output) |
-| UX | OpenAPI / curl only — **no frontend** |
+| Agents | Orchestrator + Evaluator (structured output) + Reporting (structured output) |
+| UX | **React SPA** — register, login, setup, interview, report (UI in Portuguese) |
 | Embeddings | **fastembed** (ONNX) in-process |
 | RAG seed | Decoupled job (`run_seed.py` + compose profile `seed`); manifest hash |
 | RAG readiness | **`503 RAG_NOT_READY`** on `start_interview` when empty/stale |
-| Deploy | Docker Compose; multi-stage image **~144 MB** (CI gate 650 MB); Qdrant pinned `v1.19.0` |
+| Public hardening | CORS (`CORS_ORIGINS`), rate limiting (global + auth), payload limits |
+| Deploy (local) | Docker Compose; multi-stage image **~144 MB** (CI gate 650 MB); Qdrant pinned `v1.19.0` |
+| Deploy (prod) | Terraform → Render API + Supabase Postgres + Qdrant Cloud; Vercel frontend |
 | Tests | Unit + API + integration in CI |
 
 ### Validated vs assumed
 
 | Validated (evidence in code/CI) | Assumed (not tested with real users) |
 |---------------------------------|--------------------------------------|
-| Agent pipeline works end-to-end | Candidates want this without a polished UI |
+| Agent pipeline works end-to-end | Candidates complete flow without hand-holding |
+| Full UI flow wired to API | Report quality is enough to return for a second session |
 | One domain with curated content | `async_messaging` is the right first niche |
 | Final report delivers enough value | Hiding per-turn feedback improves the experience |
 | Groq + OpenRouter cover LLM needs | Cost per session is sustainable at scale |
 | Domain registry scales to new topics | Users will return for a second interview |
 
-**Summary:** the **technical MVP** exists. The **product MVP** — something a non-technical candidate completes without help — does not yet.
+**Summary:** the **technical MVP** and **product MVP UI** exist. **v0.3 validation** — 3–5 external candidates completing the flow without curl or Swagger — is the remaining gate.
 
 ---
 
@@ -75,9 +78,9 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 
 | Persona | Value today | Value in roadmap |
 |---------|-------------|------------------|
-| **Candidate (self-study)** | Practice flow + final report via API | React UI, more domains, replay variety, optional per-question feedback |
+| **Candidate (self-study)** | Full web flow: register → interview → report | More domains, replay variety, optional per-question feedback |
 | **Company / recruiter** | None | Assign interviews, view reports, custom domains + RAG + rubrics |
-| **Builder (Miller)** | Solid stack, CI, extensible architecture | Dogfooding, controlled LLM cost, steady shipping cadence |
+| **Builder (Miller)** | Solid stack, CI, SPA + Terraform deploy | Dogfooding, controlled LLM cost, external validation (v0.3) |
 
 ---
 
@@ -85,22 +88,23 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 
 ### Do early — high impact, low/medium effort
 
-| Item | Product value |
-|------|---------------|
-| Reliable evaluator (structured output) | Sessions complete without `503` mid-interview |
-| Answer payload limits | Safe public exposure before frontend |
-| Question randomization | Less repetitive practice sessions |
-| CORS + basic rate limiting | Required for separate frontend deploy (cross-origin API calls) |
-| Readiness endpoint (`/ready`) | Orchestrators detect Postgres/Qdrant outages |
+| Item | Product value | Status |
+|------|---------------|--------|
+| Reliable evaluator (structured output) | Sessions complete without `503` mid-interview | **Done** |
+| Answer payload limits | Safe public exposure | **Done** |
+| Question randomization | Less repetitive practice sessions | **Done** |
+| CORS + basic rate limiting | Required for separate frontend deploy | **Done** |
+| Readiness endpoint (`/ready`) | Orchestrators detect Postgres/Qdrant outages | Open |
 
 ### Do next — high impact, higher effort
 
-| Item | Product value |
-|------|---------------|
-| **React + Vite frontend** | Unblocks real candidate usage |
-| **Second domain** (e.g. Kafka) | Broader appeal; validates multi-domain story |
-| Expand questions / RAG per domain | Retention; second interview still feels fresh |
-| Interview history ("my interviews") | Return visits; progress over time |
+| Item | Product value | Status |
+|------|---------------|--------|
+| **React + Vite frontend** | Unblocks real candidate usage | **Done** — validation pending |
+| **External v0.3 testers** | Prove non-technical completion | In progress |
+| **Second domain** (e.g. Kafka) | Broader appeal; validates multi-domain story | Open |
+| Expand questions / RAG per domain | Retention; second interview still feels fresh | Open |
+| Interview history ("my interviews") | Return visits; progress over time | Open |
 
 ### Defer — until validated or persona shifts
 
@@ -112,7 +116,7 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 | Ollama / local LLM fallback | Groq works; adds ops before real cost pain |
 | Recruiter dashboard | Secondary persona; doubles scope |
 | Data pipeline (PDF/web ingest at scale) | Manual YAML curation is enough for 2–3 domains |
-| Terraform / AWS | Compose is enough for validation phase |
+| AWS-native infra | Render + Terraform sufficient for validation phase |
 
 ---
 
@@ -125,17 +129,17 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 
 ---
 
-### v0.2 — Reliable enough to demo *(shipped — remaining polish below)*
+### v0.2 — Reliable enough to demo *(shipped)*
 
 **Theme:** remove friction and failure modes before investing heavily in UI and content.
 
-| Deliverable | Product outcome |
-|-------------|-----------------|
-| Structured output in Evaluator | Fewer abandoned sessions |
-| `max_length` on answers/passwords | Safe to expose |
-| Question randomization | Practice feels less scripted |
-| CORS (prep for React) | Frontend can call API from browser |
-| Readiness endpoint (`/ready`) | Host detects dependency failures |
+| Deliverable | Product outcome | Status |
+|-------------|-----------------|--------|
+| Structured output in Evaluator | Fewer abandoned sessions | **Done** |
+| `max_length` on answers/passwords | Safe to expose | **Done** |
+| Question randomization | Practice feels less scripted | **Done** |
+| CORS (prep for React) | Frontend can call API from browser | **Done** |
+| Readiness endpoint (`/ready`) | Host detects dependency failures | Open |
 
 **North star:** *"I can host this and complete 10 interviews in a row without a 503."*
 
@@ -147,17 +151,19 @@ For tactical debt and checkboxes, see [`todo.md`](./todo.md).
 
 ---
 
-### v0.3 — First real candidate
+### v0.3 — First real candidate *(nearly complete — validation pending)*
 
 **Theme:** someone who is not a REST power user can finish an interview.
 
-| Deliverable | Product outcome |
-|-------------|-----------------|
-| React + Vite SPA (separate deploy) | Login → pick domain/topic → answer → report |
-| CORS configured for frontend origin | Cross-origin API from Vercel (or similar) to API host |
-| Bearer token in `localStorage` | Auth for v0.3; httpOnly cookies deferred |
-| Loading / error states, report retry UX | Trust when LLM hiccups |
-| Rate limiting on auth | Basic abuse protection on public instance |
+| Deliverable | Product outcome | Status |
+|-------------|-----------------|--------|
+| React + Vite SPA (separate deploy) | Login → pick domain/topic → answer → report | **Done** |
+| CORS configured for frontend origin | Cross-origin API from Vercel to API host | **Done** |
+| Bearer token in `localStorage` | Auth for v0.3; httpOnly cookies deferred | **Done** |
+| Loading / error states, report retry UX | Trust when LLM hiccups | **Done** |
+| Rate limiting on auth | Basic abuse protection on public instance | **Done** |
+| Terraform prod deploy | Render + Supabase + Qdrant Cloud | **Done** |
+| 3–5 external testers complete flow | v0.3 success criterion | **Pending** |
 
 **MVP frontend scope (intentionally narrow)**
 
@@ -268,15 +274,13 @@ flowchart LR
 
 Ordered by how much they block a candidate today:
 
-1. **No frontend** — primary blocker for v0.3  
-2. **Evaluator reliability** — parse failures abort sessions  
-3. **First-boot seed job** — operator must run `docker compose --profile seed` once (documented; not self-service for non-technical hosts)  
-4. **Question repetition** — deterministic first question per topic  
-5. **Finite content** — 35 questions; power users exhaust variety quickly  
-6. **No public hardening** — rate limits needed when React ships  
-7. **Single domain** — limits audience to async-messaging learners  
+1. **External validation (v0.3)** — UI exists; need 3–5 non-technical testers to complete the full flow  
+2. **First-boot seed job** — operator must run seed once (local compose or Qdrant Cloud); documented in [infra/README.md](../infra/README.md)  
+3. **Readiness endpoint** — `/health` only; orchestrators cannot detect Postgres/Qdrant outage  
+4. **Finite content** — 35 questions; power users exhaust variety quickly  
+5. **Single domain** — limits audience to async-messaging learners  
 
-Not blocking the first external candidate: A2A, custom company domains, Ollama, Terraform.
+Not blocking the first external candidate: A2A, custom company domains, Ollama, interview history.
 
 ---
 
@@ -313,6 +317,9 @@ Not blocking the first external candidate: A2A, custom company domains, Ollama, 
 | **`product_roadmap.md`** (this file) | Personas, phases, product priorities, validation |
 | **`technical_roadmap.md`** | Architecture horizons, ADRs, scale bottlenecks |
 | **`todo.md`** | Actionable engineering backlog with severity |
+| **[`CHANGELOG.md`](../CHANGELOG.md)** | Release history |
+| **[`infra/README.md`](../infra/README.md)** | Production deploy (Terraform, Render, seed) |
+| **[`frontend/README.md`](../frontend/README.md)** | SPA routes, local dev, Vercel |
 
 When a product phase starts, trace deliverables to `technical_roadmap.md` initiatives and `todo.md` checkboxes.
 

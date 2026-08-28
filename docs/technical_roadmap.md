@@ -1,6 +1,6 @@
 # Technical Roadmap — interview-agent
 
-Strategic architecture and evolution plan for **interview-agent** (~v0.1.0).
+Strategic architecture and evolution plan for **interview-agent** (~v0.3).
 
 For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 
@@ -8,7 +8,7 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 
 ## Current architectural vision
 
-**v0.1 MVP** — FastAPI monolith with layered design and one live domain today.
+**v0.3** — FastAPI monolith + React SPA; layered backend with one live domain; production on Render + Supabase + Qdrant Cloud.
 
 ### Stack
 
@@ -16,7 +16,9 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 - **Domains:** `DomainModule` + `register_domain()` (`app/core/domain/registry.py`); only `async_messaging` wired via `app/domains/async_messaging/bootstrap.py`
 - **Persistence:** Postgres with partial unique indexes (`uq_interviews_candidate_active`, `uq_interview_turn_number` in `app/core/db/models.py`)
 - **RAG:** Qdrant (`app/core/rag/`) + **fastembed** (ONNX) in-process embeddings (`app/core/rag/embeddings.py`)
-- **LLM:** Groq primary → OpenRouter fallback (`app/core/llm/fallback.py`)
+- **LLM:** Groq primary → OpenRouter fallback (`app/core/llm/fallback.py`); evaluator and reporter both use Pydantic structured output
+- **Frontend:** React SPA (Vercel); Bearer token in `localStorage`; CORS on API
+- **Rate limiting:** slowapi, moving-window, `memory://` storage — limits apply per process (not shared across replicas)
 
 
 
@@ -31,6 +33,7 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 
 - **Almost stateless HTTP:** singletons via `@lru_cache` (`get_llm_chain`, `get_embedding_provider`, `get_cached_domain`); embedding model and Qdrant clients remain in-process state
 - **Container startup:** migrations + Uvicorn only (`scripts/docker-entrypoint.sh`); Qdrant seed is a separate compose profile job (`scripts/run_seed.py`)
+- **Production:** Terraform provisions Render web service; Supabase Postgres + Qdrant Cloud referenced by env vars (see `infra/`)
 - **RAG gate:** `start_interview` returns `503 RAG_NOT_READY` when the collection is empty or the manifest is stale
 - **Image:** multi-stage build ~144 MB; CI hard gate at 650 MB (`scripts/ci/check_image_size.sh`)
 
@@ -46,6 +49,7 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 | LLM resilience | Groq → OpenRouter with transient/permanent error classification                                       |
 | Persistence    | Partial unique indexes, `DuplicateTurn` handling, nested savepoint for report races                   |
 | Auth           | Argon2, opaque tokens with SHA-256 hash, no PII in logs                                               |
+| Public exposure | CORS, slowapi rate limits, answer/password length caps                                              |
 | Tests          | Unit + API + integration in CI; LLM fakes, transactional fixtures, integration with state rehydration |
 
 
@@ -60,8 +64,8 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 | ------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | Embeddings in API process | `EmbeddingProvider`, `Dockerfile`                                                | fastembed in-process; thread-pool contention (`asyncio.to_thread` in `EvaluatorAgent`) under high concurrency |
 | LLM on critical HTTP path | `InterviewService.submit_answer` → `OrchestratorAgent`                           | High P95 latency (RAG + evaluate + report); no backpressure; token cost on retry/duplicate                    |
-| Fragile evaluator parsing | `EvaluatorAgent._parse_response()` vs `ReportingAgent` + `generate_structured()` | Intermittent failures → `503 LLM_UNAVAILABLE`; architectural inconsistency between agents                     |
 | Health without readiness  | `app/api/main.py` `/health`                                                      | Orchestrator marks pod healthy when Postgres/Qdrant is down                                                   |
+| In-memory rate limits     | `app/api/rate_limit.py` (`storage_uri="memory://"`)                              | Multi-replica deploy: each instance has its own bucket; effective limit scales with replica count             |
 | No queue/workers          | Everything in Uvicorn                                                            | Cannot decouple LLM spikes from HTTP throughput; no DLQ for failed reports                                    |
 | Partial idempotency       | DB constraints + LLM before commit                                               | `DuplicateTurn` protects turn integrity, but duplicate submit already spent tokens                            |
 | Minimal observability     | `app/core/logging.py` plain text                                                 | No `request_id`, no token/latency/cost metrics per interview                                                  |
@@ -80,13 +84,13 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 ### Short term (0–3 months) — harden the MVP
 
 
-| #   | Initiative                              | Problem                                                   | Approach                                                                 | Effort     |
-| --- | --------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------ | ---------- |
-| 1   | **Liveness vs readiness**               | `/health` returns OK without dependency checks            | `/health` (liveness) + `/ready` with Postgres + Qdrant ping              | Low        |
-| 2   | **Structured output in evaluator**      | Text parsing (`NIVEL:`/`FEEDBACK:`) vs JSON in reporter   | Pydantic schema + `generate_structured()` (mirror `reporting_schema.py`) | High       |
-| 3   | **Idempotency-Key on submit**           | Client retry after timeout wastes LLM tokens              | HTTP header → `idempotent_requests` table (key, response, TTL 24h)       | Medium     |
-| 4   | **Payload limits + basic cost logging** | No `max_length` on answers; tokens not structured in logs | Schema limits (4–8 KB); log `tokens_used` from `LLMResponse`             | Low        |
-| 5   | **Test hardening**                      | Alembic drift, missing security API tests                 | Alembic in fixtures; ownership 404, report retry, duplicate turn tests   | Low–Medium |
+| #   | Initiative                              | Problem                                                   | Approach                                                                 | Effort     | Status |
+| --- | --------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------ | ---------- | ------ |
+| 1   | **Liveness vs readiness**               | `/health` returns OK without dependency checks            | `/health` (liveness) + `/ready` with Postgres + Qdrant ping              | Low        | Open   |
+| 2   | **Structured output in evaluator**      | Text parsing vs JSON in reporter                          | Pydantic schema + `generate_structured()` (`EvaluationLLMOutput`)        | High       | **Done** |
+| 3   | **Idempotency-Key on submit**           | Client retry after timeout wastes LLM tokens              | HTTP header → `idempotent_requests` table (key, response, TTL 24h)       | Medium     | Open   |
+| 4   | **Payload limits + basic cost logging** | Tokens not structured in logs                             | Schema limits (4096 B answers); log `tokens_used` from `LLMResponse`      | Low        | Partial — limits done; cost logging open |
+| 5   | **Test hardening**                      | Alembic drift, missing security API tests                 | Alembic in fixtures; ownership 404, report retry, duplicate turn tests   | Low–Medium | Open   |
 
 
 **Target outcome:** Reliable single-replica deploy, stable LLM pipeline, safe public exposure.
@@ -125,7 +129,7 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 | 17  | **A2A protocol**              | REST-only synchronous integration                         | Agent Card; async tasks via messaging; `OrchestratorAgent` as coordinator            | External agent ecosystem               |
 | 18  | **Data partitioning**         | `interview_turns` + JSONB grows linearly                  | Partition by `created_at`; read replica for reports/analytics; cold archive (S3)     | >1M interviews                         |
 | 19  | **Intelligent model routing** | Same model for evaluate and report; no budget             | Smaller model for evaluate, larger for report; daily quota per tenant                | LLM cost >10% of ops budget            |
-| 20  | **Frontend + streaming**      | No CORS; no SSE/WebSocket; feedback hidden from candidate | SPA with SSE for progress; optional `FallbackLLMProvider.stream`                     | Interactive UX replaces REST client    |
+| 20  | **Frontend streaming**        | No SSE/WebSocket; feedback hidden from candidate          | SSE for progress during long submits; optional `FallbackLLMProvider.stream`          | Interactive UX beyond current REST SPA     |
 
 
 **Target outcome:** B2B-ready platform with tenant isolation, async agent integration, and cost controls.
@@ -140,8 +144,8 @@ For tactical debt and checkboxes, see `[todo.md](./todo.md)`.
 | ADR     | Topic                 | Proposed decision                                      | Alternatives                                |
 | ------- | --------------------- | ------------------------------------------------------ | ------------------------------------------- |
 | ADR-001 | Where embeddings run  | In-process until 2 replicas; then fastembed sidecar    | Hosted embedding API; GPU node pool         |
-| ADR-002 | Sync vs async LLM     | Sync until frontend ships; queue when P95 exceeds SLA  | Aggressive timeout only                     |
-| ADR-003 | Unified LLM contract  | Pydantic structured output for evaluate **and** report | Tool calling; few-shot text parsing         |
+| ADR-002 | Sync vs async LLM     | Sync while P95 within SLA; queue when P95 exceeds SLA or >50 concurrent submits | Aggressive timeout only                     |
+| ADR-003 | Unified LLM contract  | Pydantic structured output for evaluate **and** report — **implemented**        | Tool calling; few-shot text parsing         |
 | ADR-004 | Submit idempotency    | `Idempotency-Key` HTTP + Postgres table                | DB constraints only (`DuplicateTurn`)       |
 | ADR-005 | Qdrant seed strategy  | Init job + manifest hash                               | Conditional seed in entrypoint              |
 | ADR-006 | Observability stack   | OpenTelemetry + JSON structured logs                   | Extra log fields only (interim)             |
