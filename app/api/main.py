@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.errors import register_error_handlers
+from app.api.rate_limit import limiter, setup_rate_limiting
 from app.api.routers import auth, discovery, interviews
 from app.core.domain.registry import (
     DomainEnum,
@@ -42,6 +43,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Interview Agent API", lifespan=lifespan)
+setup_rate_limiting(app)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -57,5 +59,6 @@ app.include_router(interviews.router)
 
 
 @app.get("/health")
+@limiter.exempt
 def health() -> dict[str, str]:
     return {"status": "ok"}

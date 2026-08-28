@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     QDRANT_PORT: int = 6333
     QDRANT_API_KEY: str | None = None
     CORS_ORIGINS: str = _DEFAULT_CORS_ORIGINS_STR
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_GLOBAL: str = "20/minute"
+    RATE_LIMIT_AUTH: str = "5/minute"
     GROQ_API_KEY: str
     OPENROUTER_API_KEY: str
 
